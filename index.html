@@ -9521,8 +9521,9 @@ A full scan across all REP packages would significantly reduce the unmatched cou
 
 <h2>Key Consideration</h2>
 <div class="finding" style="border-left:3px solid var(--orange)">
-<strong style="color:var(--orange)">Surface area constraint</strong><br>
-The External API pattern fundamentally <strong>limits what TPAs can consume</strong>. In Studio, the A11Y adapter directly uses 20+ core APIs (<code>BreakpointsAPI</code>, <code>ColorPickerAPI</code>, <code>DialogsFlowsAPI</code>, <code>DocumentServicesAPI</code>, etc.). With External APIs, it would only access what's explicitly designed into the external contract. This is both the <strong>strength</strong> (controlled, stable surface) and the <strong>weakness</strong> (anything the TPA needs must be anticipated and pre-designed into the External API).
+The External API pattern fundamentally <strong>limits what TPAs can consume</strong>.
+<br><br>
+<strong>In Studio, the A11Y adapter directly uses 20+ core APIs</strong> (<code>BreakpointsAPI</code>, <code>ColorPickerAPI</code>, <code>DialogsFlowsAPI</code>, <code>DocumentServicesAPI</code>, etc.). With External APIs, it would only access what's explicitly designed into the external contract.
 </div>
 
 <h2>Harmony's External API Architecture</h2>
