@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Dependencies Dashboard</title>
+<style>
+:root {
+  --bg: #0d1117; --surface: #161b22; --border: #30363d;
+  --text: #c9d1d9; --text-muted: #8b949e; --accent: #58a6ff;
+  --accent-dim: #1f6feb22; --green: #3fb950; --red: #f85149;
+  --orange: #d29922; --purple: #bc8cff;
+  --d-grid: #2e7d32; --d-supergrid: #00838f; --d-components: #00695c;
+  --d-editor: #283593; --d-sizing: #f57f17; --d-document: #e65100;
+  --d-monitoring: #1565c0; --d-core: #c62828; --d-ui-infra: #f9a825;
+  --d-data: #7b1fa2; --d-indications: #ad1457; --d-transforms: #bf360c;
+  --d-sections: #558b2f; --d-page-grid: #006064; --d-presence: #1a237e;
+  --d-spacing: #827717; --d-platform: #7b1fa2; --d-shared: #0277bd;
+  --d-pages: #2e7d32;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; background:var(--bg); color:var(--text); line-height:1.5; font-size:13px; }
+
+/* Header */
+header { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 24px; position:sticky; top:0; z-index:100; }
+header h1 { font-size:18px; font-weight:600; }
+header p { color:var(--text-muted); font-size:12px; }
+
+/* Tabs */
+.tabs { display:flex; border-bottom:1px solid var(--border); background:var(--surface); padding:0 24px; position:sticky; top:54px; z-index:99; }
+.tab-btn { background:none; border:none; color:var(--text-muted); padding:9px 16px; cursor:pointer; font-size:13px; font-weight:500; border-bottom:2px solid transparent; }
+.tab-btn:hover { color:var(--text); }
+.tab-btn.active { color:var(--accent); border-bottom-color:var(--accent); }
+.tab-content { display:none; padding:20px 24px; max-width:960px; margin:0 auto; }
+.tab-content.active { display:block; }
+
+/* Subtabs */
+.subtabs { display:flex; border-bottom:1px solid var(--border); margin-bottom:20px; }
+.subtab-btn { background:none; border:none; color:var(--text-muted); padding:7px 12px; cursor:pointer; font-size:12px; font-weight:500; border-bottom:2px solid transparent; }
+.subtab-btn:hover { color:var(--text); }
+.subtab-btn.active { color:var(--purple); border-bottom-color:var(--purple); }
+.subtab-content { display:none; }
+.subtab-content.active { display:block; }
+
+/* Stats */
+.stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-bottom:20px; }
+.stat { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:12px; text-align:center; }
+.stat .v { font-size:24px; font-weight:700; color:var(--accent); }
+.stat .l { font-size:11px; color:var(--text-muted); }
+
+/* Diagram card */
+.dcard { background:var(--surface); border:1px solid var(--border); border-radius:6px; margin-bottom:16px; }
+.dcard-h { padding:10px 14px; border-bottom:1px solid var(--border); cursor:pointer; user-select:none; display:flex; align-items:center; justify-content:space-between; }
+.dcard-h:hover { background:var(--accent-dim); }
+.dcard-h h3 { font-size:13px; font-weight:600; }
+.dcard-h .m { color:var(--text-muted); font-size:11px; margin-left:8px; }
+.dcard-h .arr { color:var(--text-muted); font-size:14px; transition:transform .2s; }
+.dcard-h.c .arr { transform:rotate(-90deg); }
+.dcard-b { padding:14px; }
+.dcard-b.c { display:none; }
+
+/* Dep diagram — hub & spoke as vertical layout */
+.dep { display:flex; flex-direction:column; align-items:center; gap:0; }
+.dep-source { background:var(--accent-dim); border:2px solid var(--accent); border-radius:6px; padding:8px 16px; font-weight:600; font-size:13px; color:var(--accent); text-align:center; max-width:300px; }
+.dep-source small { display:block; font-weight:400; font-size:11px; color:var(--text-muted); }
+.dep-line { width:2px; height:16px; background:var(--border); }
+.dep-fork { width:60%; min-width:200px; height:2px; background:var(--border); position:relative; }
+.dep-domains { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:8px; width:100%; margin-top:10px; }
+.dom { border-radius:5px; overflow:hidden; border:1px solid; }
+.dom-h { padding:4px 8px; font-size:11px; font-weight:600; color:#fff; }
+.dom-b { padding:6px 8px; background:var(--surface); }
+.dom-b span { display:block; font-size:12px; padding:1px 0; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dom-b span:hover { color:var(--accent); }
+
+/* Internal deps */
+.dep-int { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; justify-content:center; }
+.dep-int-label { font-size:11px; color:var(--text-muted); margin-right:4px; }
+.dep-int span { font-size:11px; padding:2px 8px; background:var(--bg); border:1px dashed var(--border); border-radius:10px; color:var(--text-muted); }
+
+/* Domain colors — border + header bg */
+.dom-grid { border-color:var(--d-grid); } .dom-grid .dom-h { background:var(--d-grid); }
+.dom-supergrid { border-color:var(--d-supergrid); } .dom-supergrid .dom-h { background:var(--d-supergrid); }
+.dom-components { border-color:var(--d-components); } .dom-components .dom-h { background:var(--d-components); }
+.dom-editor { border-color:var(--d-editor); } .dom-editor .dom-h { background:var(--d-editor); }
+.dom-sizing { border-color:var(--d-sizing); } .dom-sizing .dom-h { background:var(--d-sizing); color:#000; }
+.dom-document { border-color:var(--d-document); } .dom-document .dom-h { background:var(--d-document); }
+.dom-monitoring { border-color:var(--d-monitoring); } .dom-monitoring .dom-h { background:var(--d-monitoring); }
+.dom-core { border-color:var(--d-core); } .dom-core .dom-h { background:var(--d-core); }
+.dom-ui-infra { border-color:var(--d-ui-infra); } .dom-ui-infra .dom-h { background:var(--d-ui-infra); color:#000; }
+.dom-data { border-color:var(--d-data); } .dom-data .dom-h { background:var(--d-data); }
+.dom-indications { border-color:var(--d-indications); } .dom-indications .dom-h { background:var(--d-indications); }
+.dom-transforms { border-color:var(--d-transforms); } .dom-transforms .dom-h { background:var(--d-transforms); }
+.dom-sections { border-color:var(--d-sections); } .dom-sections .dom-h { background:var(--d-sections); }
+.dom-page-grid { border-color:var(--d-page-grid); } .dom-page-grid .dom-h { background:var(--d-page-grid); }
+.dom-presence { border-color:var(--d-presence); } .dom-presence .dom-h { background:var(--d-presence); }
+.dom-spacing { border-color:var(--d-spacing); } .dom-spacing .dom-h { background:var(--d-spacing); }
+.dom-platform { border-color:var(--d-platform); } .dom-platform .dom-h { background:var(--d-platform); }
+.dom-shared { border-color:var(--d-shared); } .dom-shared .dom-h { background:var(--d-shared); }
+.dom-pages { border-color:var(--d-pages); } .dom-pages .dom-h { background:var(--d-pages); }
+.dom-monolith { border-color:#c92a2a; } .dom-monolith .dom-h { background:#c92a2a; }
+.dom-addons { border-color:var(--d-ui-infra); } .dom-addons .dom-h { background:var(--d-ui-infra); color:#000; }
+
+/* Tables */
+table { width:100%; border-collapse:collapse; margin:12px 0; font-size:12px; }
+th { background:var(--surface); text-align:left; padding:6px 10px; border:1px solid var(--border); font-weight:600; color:var(--accent); }
+td { padding:5px 10px; border:1px solid var(--border); }
+tr:hover td { background:#1c2128; }
+.badge { display:inline-block; padding:1px 7px; border-radius:10px; font-size:10px; font-weight:600; }
+.badge-high { background:#f8514922; color:var(--red); }
+.badge-medium { background:#d2992222; color:var(--orange); }
+.badge-low { background:#3fb95022; color:var(--green); }
+.badge-none { background:#30363d; color:var(--text-muted); }
+
+h2 { font-size:15px; margin:20px 0 8px; color:var(--accent); }
+h2:first-child { margin-top:0; }
+p { margin:6px 0; color:var(--text-muted); font-size:13px; }
+ol,ul { margin:6px 0 6px 20px; color:var(--text-muted); font-size:13px; }
+li { margin:3px 0; }
+hr { border:none; border-top:1px solid var(--border); margin:20px 0; }
+
+/* Layer bar chart */
+.layer-bars { margin:16px 0; }
+.layer-bar-row { display:flex; align-items:center; gap:10px; margin:5px 0; }
+.layer-bar-label { width:140px; text-align:right; font-size:12px; font-weight:500; flex-shrink:0; }
+.layer-bar-track { flex:1; height:28px; background:var(--bg); border-radius:4px; position:relative; overflow:hidden; }
+.layer-bar-fill { height:100%; border-radius:4px; display:flex; align-items:center; padding:0 10px; font-size:11px; font-weight:600; color:#fff; white-space:nowrap; min-width:fit-content; transition:width .5s ease; }
+.layer-bar-nums { width:120px; font-size:11px; color:var(--text-muted); flex-shrink:0; }
+.layer-bar-nums strong { color:var(--text); }
+
+/* Layer colors */
+.lc-flows { background:#2e7d32; }
+.lc-data { background:#7b1fa2; }
+.lc-ui { background:#1565c0; }
+.lc-deriv { background:#00838f; }
+.lc-site { background:#e65100; }
+.lc-infra { background:#c62828; }
+.lc-vert { background:#558b2f; }
+.lc-replug { background:#455a64; }
+
+/* Layer badge */
+.lbadge { display:inline-block; padding:2px 8px; border-radius:10px; font-size:10px; font-weight:600; }
+.lbadge-flows { background:#2e7d3233; color:#4caf50; }
+.lbadge-data { background:#7b1fa233; color:#ce93d8; }
+.lbadge-ui { background:#1565c033; color:#64b5f6; }
+.lbadge-deriv { background:#00838f33; color:#4dd0e1; }
+.lbadge-site { background:#e6510033; color:#ffb74d; }
+.lbadge-infra { background:#c6282833; color:#ef5350; }
+.lbadge-vert { background:#558b2f33; color:#aed581; }
+
+/* API grid */
+.api-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:4px; }
+.api-grid span { font-size:12px; padding:3px 6px; border-radius:3px; }
+.api-grid span:hover { background:var(--accent-dim); color:var(--accent); }
+
+/* Finding cards */
+.finding { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:12px 16px; margin:8px 0; }
+.finding strong { color:var(--accent); }
+
+/* Comparison bar (used vs unused stacked) */
+.cmp-bar { display:flex; height:22px; border-radius:4px; overflow:hidden; margin:2px 0; }
+.cmp-bar-fill { display:flex; align-items:center; padding:0 6px; font-size:10px; font-weight:600; color:#fff; white-space:nowrap; }
+.cmp-bar-empty { background:#30363d; flex:1; display:flex; align-items:center; padding:0 6px; font-size:10px; color:var(--text-muted); white-space:nowrap; }
+
+/* Category pills */
+.cat-pills { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
+.cat-pill { padding:4px 12px; border-radius:12px; font-size:11px; font-weight:500; border:1px solid var(--border); background:var(--surface); }
+.cat-pill strong { color:var(--accent); margin-right:4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Harmony &rarr; REP API Dependencies</h1>
+  <p>Layer Analysis, Whitelist Coverage, Pages, SuperGrid, and Indicators</p>
+</header>
+<nav class="tabs">
+  <button class="tab-btn active" onclick="showTab('layers',this)">Layer Analysis</button>
+  <button class="tab-btn" onclick="showTab('whitelist',this)">Whitelist</button>
+  <button class="tab-btn" onclick="showTab('pages',this)">Pages</button>
+  <button class="tab-btn" onclick="showTab('supergrid',this)">SuperGrid</button>
+  <button class="tab-btn" onclick="showTab('indicators',this)">Indicators</button>
+</nav>
+
+<!-- ========== LAYER ANALYSIS ========== -->
+<div id="layers" class="tab-content active">
+<div class="stats">
+  <div class="stat"><div class="v">275</div><div class="l">APIs Used by Harmony</div></div>
+  <div class="stat"><div class="v">759</div><div class="l">Total REP APIs</div></div>
+  <div class="stat"><div class="v">36.2%</div><div class="l">Overall Coverage</div></div>
+  <div class="stat"><div class="v">7</div><div class="l">Layers Used</div></div>
+</div>
+
+<h2>Layer Distribution</h2>
+<p>How Harmony's 275 API dependencies distribute across REP's architectural layers.</p>
+
+<div class="layer-bars">
+  <div class="layer-bar-row">
+    <div class="layer-bar-label">FLOWS</div>
+    <div class="layer-bar-track"><div class="layer-bar-fill lc-flows" style="width:100%">75 APIs</div></div>
+    <div class="layer-bar-nums">27.3% of Harmony &middot; <strong>34.9%</strong> of layer</div>
+  </div>
+  <div class="layer-bar-row">
+    <div class="layer-bar-label">DATA_SERVICE</div>
+    <div class="layer-bar-track"><div class="layer-bar-fill lc-data" style="width:84%">63 APIs</div></div>
+    <div class="layer-bar-nums">22.9% of Harmony &middot; <strong>32.5%</strong> of layer</div>
+  </div>
+  <div class="layer-bar-row">
+    <div class="layer-bar-label">UI</div>
+    <div class="layer-bar-track"><div class="layer-bar-fill lc-ui" style="width:70.7%">53 APIs</div></div>
+    <div class="layer-bar-nums">19.3% of Harmony &middot; <strong>34.4%</strong> of layer</div>
+  </div>
+  <div class="layer-bar-row">
+    <div class="layer-bar-label">DERIVATIVE_STATE</div>
+    <div class="layer-bar-track"><div class="layer-bar-fill lc-deriv" style="width:46.7%">35 APIs</div></div>
+    <div class="layer-bar-nums">12.7% of Harmony &middot; <strong>39.3%</strong> of layer</div>
+  </div>
+  <div class="layer-bar-row">
+    <div class="layer-bar-label">SITE</div>
+    <div class="layer-bar-track"><div class="layer-bar-fill lc-site" style="width:34.7%">26 APIs</div></div>
+    <div class="layer-bar-nums">9.5% of Harmony &middot; <strong>45.6%</strong> of layer</div>
+  </div>
+  <div class="layer-bar-row">
+    <div class="layer-bar-label">EDITOR_INFRA</div>
+    <div class="layer-bar-track"><div class="layer-bar-fill lc-infra" style="width:26.7%">20 APIs</div></div>
+    <div class="layer-bar-nums">7.3% of Harmony &middot; <strong>51.3%</strong> of layer</div>
+  </div>
+  <div class="layer-bar-row">
+    <div class="layer-bar-label">VERTICAL</div>
+    <div class="layer-bar-track"><div class="layer-bar-fill lc-vert" style="width:4%">3</div></div>
+    <div class="layer-bar-nums">1.1% of Harmony &middot; <strong>30.0%</strong> of layer</div>
+  </div>
+  <div class="layer-bar-row">
+    <div class="layer-bar-label">REPLUGGABLE</div>
+    <div class="layer-bar-track"><div class="layer-bar-fill lc-replug" style="width:0%"></div></div>
+    <div class="layer-bar-nums">0% of Harmony &middot; <strong>0%</strong> of layer</div>
+  </div>
+</div>
+
+<h2>Layer Penetration (% of layer used by Harmony)</h2>
+<table>
+  <tr><th>Layer</th><th>Used by Harmony</th><th>Total in REP</th><th>% of Harmony</th><th>% of Layer Used</th></tr>
+  <tr><td><span class="lbadge lbadge-infra">EDITOR_INFRA</span></td><td>20</td><td>39</td><td>7.3%</td><td><strong>51.3%</strong></td></tr>
+  <tr><td><span class="lbadge lbadge-site">SITE</span></td><td>26</td><td>57</td><td>9.5%</td><td><strong>45.6%</strong></td></tr>
+  <tr><td><span class="lbadge lbadge-deriv">DERIVATIVE_STATE</span></td><td>35</td><td>89</td><td>12.7%</td><td><strong>39.3%</strong></td></tr>
+  <tr><td><span class="lbadge lbadge-flows">FLOWS</span></td><td>75</td><td>215</td><td>27.3%</td><td><strong>34.9%</strong></td></tr>
+  <tr><td><span class="lbadge lbadge-ui">UI</span></td><td>53</td><td>154</td><td>19.3%</td><td><strong>34.4%</strong></td></tr>
+  <tr><td><span class="lbadge lbadge-data">DATA_SERVICE</span></td><td>63</td><td>194</td><td>22.9%</td><td><strong>32.5%</strong></td></tr>
+  <tr><td><span class="lbadge lbadge-vert">VERTICAL</span></td><td>3</td><td>10</td><td>1.1%</td><td><strong>30.0%</strong></td></tr>
+  <tr><td>REPLUGGABLE</td><td>0</td><td>1</td><td>0%</td><td>0%</td></tr>
+  <tr style="font-weight:600"><td>Total</td><td>275</td><td>759</td><td>100%</td><td>36.2%</td></tr>
+</table>
+
+<h2>Key Findings</h2>
+<div class="finding"><strong>1.</strong> Harmony uses <strong>36.2%</strong> of editorx-core-api (275 out of 759 APIs).</div>
+<div class="finding"><strong>2.</strong> <strong>FLOWS is the most consumed layer</strong> in absolute terms (75 APIs, 27.3% of Harmony's deps), reflecting heavy use of orchestration/business logic from REP.</div>
+<div class="finding"><strong>3.</strong> <strong>EDITOR_INFRA has the highest penetration at 51.3%</strong> &mdash; Harmony uses more than half of all editor infrastructure APIs. These are foundational framework APIs (ComponentEditorAPI, StageContextBuilderAPI, TraverseDataServiceAPI, LayoutBuilderAPI, etc.).</div>
+<div class="finding"><strong>4.</strong> <strong>SITE layer has 45.6% penetration</strong> &mdash; nearly half of all site-level APIs are consumed (DocumentServicesAPI, ExperimentsAPI, EditorPointerAPI, PreviewAPI, etc.).</div>
+<div class="finding"><strong>5.</strong> <strong>DERIVATIVE_STATE has 39.3% penetration</strong> &mdash; Harmony relies heavily on computed state from REP (ComponentMeasureAPI, GridDerivativeStateAPI, SuperGridDerivativeStateAPI, etc.).</div>
+<div class="finding"><strong>6.</strong> <strong>All layers except REPLUGGABLE are used</strong> &mdash; even 3 VERTICAL APIs are consumed (MultiEditor* APIs).</div>
+<div class="finding"><strong>7.</strong> <strong>~64% of REP APIs are unused by Harmony</strong> &mdash; 484 APIs exist only for other consumers or are unused.</div>
+
+<hr>
+
+<h2>Per-Layer API Lists</h2>
+
+<!-- FLOWS -->
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3><span class="lbadge lbadge-flows">FLOWS</span> &nbsp;75 APIs</h3><span class="m">orchestration &amp; business logic</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="api-grid">
+<span>ApplicationInstallAPI</span><span>ApplicationUninstallAPI</span><span>AppMarketAPI</span><span>AutoDOMOrderFlowsAPI</span><span>BackstageAPI</span><span>BIEnricherAPI</span><span>BreakpointsSelectionFlowsAPI</span><span>ComponentAddFlowsAPI</span><span>ComponentAddToStageFlowAPI</span><span>ComponentArrangementFlowsAPI</span><span>ComponentDataFlowsAPI</span><span>ComponentDragFlowsBuilderAPI</span><span>ComponentEffectsFlowsAPI</span><span>ComponentFlowsAPI</span><span>ComponentLayoutFlowsAPI</span><span>ComponentLayoutFlowsAPI_deprecated</span><span>ComponentResizeFlowsBuilderAPI</span><span>ComponentRotateFlowsBuilderAPI</span><span>ComponentSelectFlowsAPI</span><span>ComponentsLabelHandlerAPI</span><span>ComponentSpacingFlowsAPI</span><span>ComponentStretchFlowsAPI</span><span>ComponentVisibilityFlowsAPI</span><span>ContentMaxWidthFlowsAPI</span><span>CopyPasteAPI</span><span>DialogsFlowsAPI</span><span>DOMSortingAPI</span><span>EditSiteWithAIAPI</span><span>ExportEMLAPI</span><span>FocusModeEditingFlowsAPI</span><span>FontPickerAPI</span><span>FormGenerationFlowsAPI</span><span>GridFlowsAPI</span><span>GridSectionsFlowsAPI_Deprecated</span><span>GroupingAPI</span><span>HamburgerMenuAPI</span><span>HeaderEffectsFlowsAPI</span><span>HelpWidgetAPI</span><span>ImportEMLAPI</span><span>LightboxRemoveAPI</span><span>LinkPanelAPI_deprecated</span><span>MediaManagerAPI</span><span>MediaStudioAPI</span><span>MenuHelpConfigAPI</span><span>MenuPanelFlowsAPI</span><span>MultilingualAPI</span><span>PageGridFlowsContributionAPI</span><span>PagesFlowsAPI</span><span>PanelsCreatorAPI</span><span>PinnedToContainerFlowsAPI</span><span>PlatformInitOptionsAPI</span><span>PlatformIntentInstallAppsAPI</span><span>PlatformPagesAPI</span><span>PresenceBIParamsAPI</span><span>PresenceExperienceIndicatorAPI</span><span>PresenceExperienceWorkspaceAPI</span><span>PresenceFlowsAPI</span><span>PresetsAPI</span><span>PreviewZoomAPI</span><span>PreviewZoomConfigurationAPI</span><span>ResizablePaddingFlowsAPI</span><span>RichTextBuilderActionsAPI</span><span>RichTextBuilderValuesAPI</span><span>SelectionModelConfigurationAPI</span><span>SiteNameFlowsAPI</span><span>SiteOptimizerContributionAPI</span><span>SizingBehaviorPresetFlowsAPI</span><span>SuperGridCellFlowsAPI</span><span>SystemComponentsFlowsAPI</span><span>TextComponentAPI</span><span>TpaAPI</span><span>TpaChildrenChecksAPI</span><span>TpaPagesAPI</span><span>TpaSectionAPI</span><span>TransformationsFlowsAPI</span>
+</div>
+</div></div>
+
+<!-- DATA_SERVICE -->
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3><span class="lbadge lbadge-data">DATA_SERVICE</span> &nbsp;63 APIs</h3><span class="m">data access &amp; persistence</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="api-grid">
+<span>AiComponentsContributionAPI</span><span>AppMarketStoreAPI</span><span>BaseGenericStyleAPI</span><span>BlankPageAPI</span><span>BlankPageStructureAPI</span><span>BreakpointsAPI</span><span>BreakpointsDataServiceAPI</span><span>BreakpointsPureLogicAPI</span><span>CanvasOverlayLoaderAPI</span><span>ComponentAnchorsDataServiceAPI</span><span>ComponentBehaviorAPI</span><span>ComponentDataAPI</span><span>ComponentEditorStateAPI</span><span>ComponentEffectsAPI</span><span>ComponentHierarchyAPI</span><span>ComponentInteractionAPI</span><span>ComponentPreviewAPI</span><span>ComponentReactionsAPI</span><span>ComponentRuntimeAPI</span><span>ComponentStructureAPI</span><span>ComponentStyleDataServiceAPI</span><span>ComponentTriggersAPI</span><span>ComponentUpdatesAggregatorAPI</span><span>CustomComponentAppDefIdAPI</span><span>CustomComponentContributionAPI</span><span>CustomComponentDataServiceAPI</span><span>DeeplinkAPI</span><span>DisabledSectionTypesContributionAPI</span><span>DocumentComponentMetadataAPI</span><span>DocumentComponentsSlotsAPI</span><span>DocumentStructureAPI</span><span>DomainsAPI</span><span>EditorFlowAPI</span><span>EditorPlatformAPI</span><span>EditorSettingsAPI</span><span>FeaturesAPI</span><span>GenericStyleAPI</span><span>GlobalPageLimitAPI</span><span>GlobalVariablesAPI</span><span>HistoryAPI</span><span>HowToToolAPI</span><span>IndicationParamsContributionAPI</span><span>InteractionContextAPI</span><span>LayersDataServiceAPI</span><span>LayoutHeuristicsAPI</span><span>LightboxAPI</span><span>MeasurementsCacheAPI</span><span>MenuAPI</span><span>PagesAPI</span><span>PagesDataServiceAPI</span><span>PlatformDataServiceAPI</span><span>PlatformEditorSdkAPI</span><span>PostUpdateOperationHookContributionAPI</span><span>PreviewDisplayAPI</span><span>RefComponentAPI</span><span>ResizeTransitionContributionAPI</span><span>SaveAndPublishAPI</span><span>SharedBlocksAPI</span><span>SitePropertiesAPI</span><span>UserAPI</span><span>UserPreferencesAPI</span><span>UserPreferencesSyncAPI</span><span>VariablesAPI</span>
+</div>
+</div></div>
+
+<!-- UI -->
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3><span class="lbadge lbadge-ui">UI</span> &nbsp;53 APIs</h3><span class="m">UI components &amp; panels</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="api-grid">
+<span>AIToolsAPI</span><span>AttachCandidateIndicatorAPI</span><span>AutoPanelsAPI</span><span>AutoPanelServiceCreatorAPI</span><span>BackgroundPanelUIAPI</span><span>ChildrenBoxesIndicatorAPI</span><span>CommandsFactoryAPI</span><span>ConfirmationPanelComponentAPI</span><span>CropperLogicAPI</span><span>CropperResizeAPI</span><span>CustomComponentModalAPI</span><span>DragBoxIndicatorAPI</span><span>EditBoxIndicatorAPI</span><span>EditorUIAPI</span><span>ErrorPanelComponentAPI</span><span>FocusBoxIndicatorAPI</span><span>GridGapsUIAPI</span><span>GridIndicatorsContainerAPI</span><span>GridPushAndResizeUIAPI</span><span>GridSectionResizeIndicatorAPI</span><span>HoverBoxIndicatorAPI</span><span>IndicationsAPI</span><span>IndicationsOrchestratorAPI</span><span>KeyboardNavigationAPI</span><span>LifecycleManagerUIComponentAPI</span><span>LightboxSettingsPanelAPI</span><span>LinkPanelBaseUIConfigurationAPI</span><span>LinkPanelUIConfigurationAPI</span><span>MultiDragBoxIndicatorAPI</span><span>MultiEditBoxIndicatorAPI</span><span>NativePanelsComponentsAPI</span><span>PageGridUILogicAPI</span><span>PageRemoverAPI</span><span>PresenceUIAPI</span><span>ProxyWrapperAPI</span><span>ResizablePaddingComponentUIAPI</span><span>ResizablePaddingIndicatorAPI</span><span>ResizablePaddingUtilsAPI</span><span>ResizeIndicatorAPI</span><span>RichTextBuilderPanelUIAPI</span><span>RotationIndicatorAPI</span><span>SameSizeIndicatorAPI</span><span>SpacingIndicatorAPI</span><span>SuperGridLinesIndicatorAPI</span><span>SuperGridPushResizeIndicatorAPI</span><span>SuperGridPushResizeIndicatorComponentAPI</span><span>SuperGridUIFlowsAPI</span><span>SynchronizedUIComponentsAPI</span><span>TemplateScanUiAPI</span><span>TopBarAPI</span><span>UIComponentsRegistryAPI</span><span>UserActionAPI</span><span>WithIndicationsHoverAPI</span>
+</div>
+</div></div>
+
+<!-- DERIVATIVE_STATE -->
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3><span class="lbadge lbadge-deriv">DERIVATIVE_STATE</span> &nbsp;35 APIs</h3><span class="m">computed/derived state</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="api-grid">
+<span>AutoDOMDerivativeStateAPI</span><span>BreakpointsDerivativeStateAPI</span><span>ComponentArrangementDerivativeStateAPI</span><span>ComponentEffectsDerivativeStateAPI</span><span>ComponentLayoutAPI_deprecated</span><span>ComponentLayoutDerivativeStateAPI</span><span>ComponentMeasureAPI</span><span>ComponentMeasureDerivativeStateAPI</span><span>ComponentReactionsDerivativeStateAPI</span><span>ComponentRotationDerivativeStateAPI</span><span>ComponentsDerivativeStateAPI</span><span>ComponentSpacingDerivativeStateAPI</span><span>ComponentVisibilityDerivativeStateAPI</span><span>DetachAPI</span><span>GenericComponentsDerivativeStateAPI</span><span>GlobalVariablesDerivativeStateAPI</span><span>GridDerivativeStateAPI</span><span>LayoutHeuristicsDerivativeStateAPI</span><span>MediaAPI</span><span>PageGridDerivativeStateAPI</span><span>PagesDerivativeStateAPI</span><span>PinnedToContainerDerivativeStateAPI</span><span>PositionDerivativeStateAPI</span><span>PresenceDerivativeStateAPI</span><span>ProximityToEdgeDerivativeStateAPI</span><span>RichTextBuilderComponentAPI</span><span>RotateTransitionAPI</span><span>ScrolledComponentsDerivativeStateAPI</span><span>SizingBehaviorPresetDerivativeStateAPI</span><span>SnapAPI</span><span>SuperGridCellDerivativeStateAPI</span><span>SuperGridDerivativeStateAPI</span><span>SystemComponentsDerivativeStateAPI</span><span>SystemContainerDerivativeStateAPI</span><span>TemplateSnapshotterAPI</span>
+</div>
+</div></div>
+
+<!-- SITE -->
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3><span class="lbadge lbadge-site">SITE</span> &nbsp;26 APIs</h3><span class="m">site-level infrastructure</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="api-grid">
+<span>ApplicationStateAPI</span><span>BlankSectionAPI</span><span>BrowserAPI</span><span>CheckTpaComponentTypeAPI</span><span>ClientDimensionsAPI</span><span>DocumentServicesAPI</span><span>EditorCommonParamsAPI</span><span>EditorParamsAPI</span><span>EditorPointerAPI</span><span>ExperimentsAPI</span><span>ExtendedDocumentServicesAPI</span><span>HttpClientAPI</span><span>MemoizationAPI</span><span>MiniSiteManagerAPI</span><span>PageGridExtensionsAPI</span><span>PlatformOriginAPI</span><span>PremiumAPI</span><span>PreviewAPI</span><span>PreviewComponentAPI</span><span>ResponsiveBIAPI</span><span>ResponsiveBIContributionAPI</span><span>ResponsiveFedopsAPI</span><span>SequenceLoaderAPI</span><span>StageStyleConfigAPI</span><span>TabTitleAPI</span><span>TpaDataServiceAPI</span>
+</div>
+</div></div>
+
+<!-- EDITOR_INFRA -->
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3><span class="lbadge lbadge-infra">EDITOR_INFRA</span> &nbsp;20 APIs</h3><span class="m">foundational framework &middot; 51.3% penetration</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="api-grid">
+<span>ComponentEditorAPI</span><span>ComponentEditorBIAPI</span><span>ComponentEditorBuilderAPI</span><span>ComponentPointerBuilderAPI</span><span>ComponentPointerFactoryAPI</span><span>ComponentRoutingAPI</span><span>ComponentsLocatorAPI</span><span>ComponentTypeAPI</span><span>EditorCacheAPI</span><span>IterationStrategiesAPI</span><span>LayoutBuilderAPI</span><span>LayoutGeneratorAPI</span><span>LayoutGeneratorContributionAPI</span><span>LayoutGeneratorFallbackAPI</span><span>PointerComparisonAPI</span><span>StageContextBuilderAPI</span><span>StructureComparisonKeyContributionAPI</span><span>TraverseDataServiceAPI</span><span>VariantsIteratorAPI</span><span>WixRecorderAPI</span>
+</div>
+</div></div>
+
+<!-- VERTICAL -->
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3><span class="lbadge lbadge-vert">VERTICAL</span> &nbsp;3 APIs</h3><span class="m">multi-editor vertical</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="api-grid">
+<span>MultiEditorAuthorizationAPI</span><span>MultiEditorFlowBranchingAPI</span><span>MultiEditorMetadataAPI</span>
+</div>
+</div></div>
+
+</div><!-- /layers -->
+
+<!-- ========== WHITELIST COVERAGE ========== -->
+<div id="whitelist" class="tab-content">
+<div class="stats">
+  <div class="stat"><div class="v">1,077</div><div class="l">Whitelisted Entries</div></div>
+  <div class="stat"><div class="v">811</div><div class="l">Core-API SlotKeys</div></div>
+  <div class="stat"><div class="v">557</div><div class="l">Core APIs in Whitelist</div></div>
+  <div class="stat"><div class="v">68.7%</div><div class="l">Coverage</div></div>
+</div>
+
+<div class="subtabs">
+  <button class="subtab-btn active" onclick="showSub('whitelist','overview',this)">Overview</button>
+  <button class="subtab-btn" onclick="showSub('whitelist','perlayer',this)">Per-Layer</button>
+  <button class="subtab-btn" onclick="showSub('whitelist','excluded',this)">Not in Whitelist</button>
+  <button class="subtab-btn" onclick="showSub('whitelist','methodology',this)">Methodology</button>
+</div>
+
+<!-- Overview subtab -->
+<div id="whitelist-overview" class="subtab-content active">
+
+<h2>Whitelist vs editorx-core-api</h2>
+<p>Harmony uses a <strong>whitelist</strong> approach: entry-points are explicitly listed in <code>topology-entries.lock.yaml</code>. Only whitelisted entries (and their transitive deps) load at runtime. This analysis compares those against all 811 SlotKey API definitions in editorx-core-api.</p>
+
+<table>
+  <tr><th>Metric</th><th>Count</th></tr>
+  <tr><td>Whitelisted topology entries</td><td>1,077</td></tr>
+  <tr><td>Unique declared APIs (declareAPIs)</td><td>1,031</td></tr>
+  <tr><td>Unique dependency APIs (dependencyAPIs)</td><td>850</td></tr>
+  <tr><td>Total unique APIs in whitelist graph</td><td>1,062</td></tr>
+  <tr><td>editorx-core-api SlotKey definitions</td><td>811</td></tr>
+  <tr><td style="color:var(--green)"><strong>Core APIs in whitelist</strong></td><td><strong>557 (68.7%)</strong></td></tr>
+  <tr><td style="color:var(--red)"><strong>Core APIs NOT in whitelist</strong></td><td><strong>254 (31.3%)</strong></td></tr>
+</table>
+
+<h2>Per-Layer Coverage</h2>
+<table>
+  <tr><th>Layer</th><th>In Whitelist</th><th>Total</th><th>Coverage</th><th></th></tr>
+  <tr><td><span class="lbadge lbadge-infra">EDITOR_INFRA</span></td><td>36</td><td>39</td><td><strong>92.3%</strong></td><td><div class="cmp-bar"><div class="cmp-bar-fill lc-infra" style="width:92.3%">36</div><div class="cmp-bar-empty">3</div></div></td></tr>
+  <tr><td><span class="lbadge lbadge-site">SITE</span></td><td>49</td><td>61</td><td><strong>80.3%</strong></td><td><div class="cmp-bar"><div class="cmp-bar-fill lc-site" style="width:80.3%">49</div><div class="cmp-bar-empty">12</div></div></td></tr>
+  <tr><td><span class="lbadge lbadge-deriv">DERIVATIVE_STATE</span></td><td>69</td><td>90</td><td><strong>76.7%</strong></td><td><div class="cmp-bar"><div class="cmp-bar-fill lc-deriv" style="width:76.7%">69</div><div class="cmp-bar-empty">21</div></div></td></tr>
+  <tr><td><span class="lbadge lbadge-flows">FLOWS</span></td><td>175</td><td>229</td><td><strong>76.4%</strong></td><td><div class="cmp-bar"><div class="cmp-bar-fill lc-flows" style="width:76.4%">175</div><div class="cmp-bar-empty">54</div></div></td></tr>
+  <tr><td><span class="lbadge lbadge-data">DATA_SERVICE</span></td><td>154</td><td>202</td><td><strong>76.2%</strong></td><td><div class="cmp-bar"><div class="cmp-bar-fill lc-data" style="width:76.2%">154</div><div class="cmp-bar-empty">48</div></div></td></tr>
+  <tr><td><span class="lbadge lbadge-ui">UI</span></td><td>67</td><td>163</td><td><strong>41.1%</strong></td><td><div class="cmp-bar"><div class="cmp-bar-fill lc-ui" style="width:41.1%">67</div><div class="cmp-bar-empty">96</div></div></td></tr>
+  <tr><td><span class="lbadge lbadge-vert">VERTICAL</span></td><td>5</td><td>11</td><td><strong>45.5%</strong></td><td><div class="cmp-bar"><div class="cmp-bar-fill lc-vert" style="width:45.5%">5</div><div class="cmp-bar-empty">6</div></div></td></tr>
+  <tr><td>REPLUGGABLE</td><td>1</td><td>1</td><td><strong>100%</strong></td><td><div class="cmp-bar"><div class="cmp-bar-fill lc-replug" style="width:100%">1</div></div></td></tr>
+</table>
+
+<h2>Key Findings</h2>
+<div class="finding"><strong>1.</strong> <strong>EDITOR_INFRA is almost fully consumed (92.3%)</strong> &mdash; only 3 APIs excluded (ExternalComponentEditorBuilderAPI, FeaturesMapperAPI, GfppAPI). These are foundational framework APIs.</div>
+<div class="finding"><strong>2.</strong> <strong>UI layer has the lowest coverage (41.1%)</strong> &mdash; 96 UI-layer APIs are not whitelisted. These are mostly optional indicators, panels, inspectors that Harmony replaces with its own implementations.</div>
+<div class="finding"><strong>3.</strong> FLOWS/DATA_SERVICE/DERIVATIVE_STATE all cluster around <strong>~76%</strong> &mdash; consistent three-quarter usage across the core business logic layers.</div>
+<div class="finding"><strong>4.</strong> <strong>505 whitelist APIs have no match in editorx-core-api.</strong> This number is inflated because the comparison only scanned SlotKey definitions inside <code>editorx-core-api/src/</code>. Many of these 505 are SlotKeys defined in <strong>other REP packages</strong> &mdash; <code>@wix/repluggable-addons-api</code> (PanelsAPI, HybridStoreAPI, WorkspaceAPI), <code>@wix/repluggable-workspace</code>, <code>@wix/repluggable-commands</code>, plus Private APIs and ComponentEditor behavior hooks from individual REP packages. A full scan of all REP packages would reduce the unmatched count significantly.</div>
+<div class="finding"><strong>5.</strong> <strong>Whitelist vs Harmony source comparison:</strong> Whitelist includes 557 core-api APIs, but Harmony source only directly imports 275. The gap (~282 APIs) represents <em>transitive dependencies</em> &mdash; APIs pulled in automatically as deps of whitelisted entry-points.</div>
+
+<h2>Unmatched Whitelist APIs (505)</h2>
+<div class="finding" style="border-color:var(--orange)"><strong>Scope caveat:</strong> This comparison only scanned <code>editorx-core-api/src/</code> for SlotKey definitions. Many of the 505 "unmatched" APIs are actually SlotKeys defined in <strong>other REP packages</strong> that editorx-core-api re-exports or that the whitelist depends on directly:
+<ul>
+<li><code>@wix/repluggable-addons-api</code> &mdash; PanelsAPI, HybridStoreAPI, WorkspaceAPI, etc.</li>
+<li><code>@wix/repluggable-workspace</code> &mdash; MouseAPI, UxResourcesAPI, etc.</li>
+<li><code>@wix/repluggable-commands</code> &mdash; CommandsAPI, ShortcutsAPI, etc.</li>
+<li>Individual REP packages &mdash; private/internal APIs (nuggets, edicore config keys)</li>
+</ul>
+A full scan across all REP packages would significantly reduce the unmatched count.</div>
+<p>Rough categorization of the 505 (may overlap with the above):</p>
+<div class="cat-pills">
+  <div class="cat-pill"><strong>200</strong> Private APIs</div>
+  <div class="cat-pill"><strong>113</strong> ComponentEditor hooks</div>
+  <div class="cat-pill"><strong>146</strong> Package-internal APIs</div>
+  <div class="cat-pill"><strong>11</strong> Handler Creators</div>
+  <div class="cat-pill"><strong>10</strong> Grid internals</div>
+  <div class="cat-pill"><strong>8</strong> SiteOptimizer internals</div>
+  <div class="cat-pill"><strong>7</strong> editor-platform APIs</div>
+  <div class="cat-pill"><strong>6</strong> EML internals</div>
+  <div class="cat-pill"><strong>4</strong> a11y adapters</div>
+</div>
+
+</div><!-- /whitelist-overview -->
+
+<!-- Per-Layer subtab -->
+<div id="whitelist-perlayer" class="subtab-content">
+
+<h2>EDITOR_INFRA &mdash; 36/39 in whitelist (92.3%)</h2>
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3><span class="lbadge lbadge-infra">EDITOR_INFRA</span> &nbsp;36 whitelisted APIs</h3><span class="m">3 excluded</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="api-grid">
+<span>AnyPointerAPI</span><span>ComponentContextBuilderAPI</span><span>ComponentContextBuilderPureLogicAPI</span><span>ComponentEditorAPI</span><span>ComponentEditorBIAPI</span><span>ComponentEditorBuilderAPI</span><span>ComponentLayoutBehaviourBuilderAPI</span><span>ComponentPointerBuilderAPI</span><span>ComponentPointerFactoryAPI</span><span>ComponentRoutingAPI</span><span>ComponentsLocatorAPI</span><span>ComponentTypeAPI</span><span>EditorCacheAPI</span><span>ExperimentalFlowsAPI</span><span>ExternalStateSubscriberAPI</span><span>FeaturesCollectorAPI</span><span>IterationStrategiesAPI</span><span>LayoutBuilderAPI</span><span>LayoutGeneratorAPI</span><span>LayoutGeneratorContributionAPI</span><span>LayoutGeneratorFallbackAPI</span><span>LayoutPropertyAccessorAPI</span><span>PointerComparisonAPI</span><span>ScopedComponentsAPI</span><span>SingleComponentAbstractionAPI</span><span>SingleComponentAbstractionBuilderAPI</span><span>StageContextBuilderAPI</span><span>StructureComparisonKeyContributionAPI</span><span>TraverseDataServiceAPI</span><span>TraverseDataServiceFilterAPI</span><span>UnitsConversionsPureLogicAPI</span><span>VariablePointerAPI</span><span>VariantsIteratorAPI</span><span>VariantsIteratorUtilsContributionAPI</span><span>VariantsMapperAPI</span><span>WixRecorderAPI</span>
+</div>
+<p style="margin-top:8px;color:var(--red)"><strong>Excluded (3):</strong> ExternalComponentEditorBuilderAPI, FeaturesMapperAPI, GfppAPI</p>
+</div></div>
+
+<h2>SITE &mdash; 49/61 in whitelist (80.3%)</h2>
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3><span class="lbadge lbadge-site">SITE</span> &nbsp;49 whitelisted APIs</h3><span class="m">12 excluded</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="api-grid">
+<span>ApplicationInstallOptionsAPI</span><span>ApplicationMetadataAPI</span><span>ApplicationStateAPI</span><span>BlankSectionAPI</span><span>BrowserAPI</span><span>CheckTpaComponentTypeAPI</span><span>ClientDimensionsAPI</span><span>DocumentServicesAPI</span><span>DocumentServicesFlows</span><span>EditorCommonParamsAPI</span><span>EditorInfraLayoutStrategyAPI</span><span>EditorInstanceAPI</span><span>EditorInstancePureAPI</span><span>EditorParamsAPI</span><span>EditorPointerAPI</span><span>ExpandedScopesAPI</span><span>ExperimentsAPI</span><span>ExtendedDocumentServicesAPI</span><span>ExtendedDocumentServicesIndependentCreatorAPI</span><span>ExtendedDocumentServicesLazyAPI</span><span>HeadlessHostAPI</span><span>HttpClientAPI</span><span>InstallationTranslationAPI</span><span>LocalDataAPI</span><span>LocalEditorAPI</span><span>MemoizationAPI</span><span>MiniSiteManagerAPI</span><span>PageGridExtensionsAPI</span><span>PageLifecycleStateAPI</span><span>PlatformOriginAPI</span><span>PremiumAPI</span><span>PreviewAPI</span><span>PreviewComponentAPI</span><span>PreviewEventsPluginAPI</span><span>ResponsiveBIAPI</span><span>ResponsiveBIContributionAPI</span><span>ResponsiveErrorHandlingAPI</span><span>ResponsiveFedopsAPI</span><span>ScrolledComponentsStoreAPI</span><span>SequenceLoaderAPI</span><span>SequenceLoaderCreatorAPI</span><span>StageStyleConfigAPI</span><span>TabTitleAPI</span><span>TpaDataServiceAPI</span><span>TpaEventsAPI</span><span>TransactionsAPI</span><span>TransactionsContributionAPI</span><span>UnauthenticatedHttpClientAPI</span><span>UnitOfWorkAPI</span>
+</div>
+<p style="margin-top:8px;color:var(--red)"><strong>Excluded (12):</strong> BlankPageIndependentAPI, DealerBiAPI, FetchAPI, FetchPureAPI, LazyBundleLoaderAPI, MultilingualDataServiceAPI, PartnersAPI, PingAPI, PlatformDefinitionsAPI, PlatformFallbackAPI, ShellConnectThrottleAPI, StudioRerenderAPI</p>
+</div></div>
+
+<h2>DATA_SERVICE &mdash; 154/202 in whitelist (76.2%)</h2>
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3><span class="lbadge lbadge-data">DATA_SERVICE</span> &nbsp;154 whitelisted</h3><span class="m">48 excluded</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<p style="color:var(--red)"><strong>Excluded (48):</strong> AIAssistantChatProxyDataServiceAPI, BlocksRootWidgetAPI, BusinessInfoAPI, ColorConversionsAPI, ColorsContrastAPI, CommandsIdsGroupsAPI, ComponentEditStageModeAPI, ComponentStatesAPI, ContentMaxWidthBIAPI, DashboardCategoryAPI, DealerDataAPI, DealerPlacementAPI, DealerStateAPI, DevCenterFacadeAPI, ExternalComponentsPanelsPermissionsAPI, FontDataServiceAPI, GfppDataAPI, GfppStateAPI, GlobalComponentsAPI, GradientPreferencesAPI, GridEditTracksSectionExtentionAPI, GridGeneratedTypeStoreAPI, HugStackContributionsAPI, IdleTasksContributionAPI, ImportDataServiceAPI, InspectorContributionAPI, InspectorSectionAPI, InspectorSectionStateAPI, InteractionsConfigurationAPI, InteractionsContributionAPI, MetaSiteAPI, MobileAlgoDataServiceAPI, MobileAlgoLockingDataServiceAPI, OAuthAPI, PresetsPreviewAPI, RepeaterExtensionsAPI, SiteStylesPanelAPI, SizingBehaviorEditorSettingsContributionAPI, SizingBehaviorPresetsContributionAPI, StylableThemeAPI, SvgImageAPI, ThemePanelAPI, TpaComponentEditorInspectorSectionAPI, TransitionsAPI, TranslationUtilsAPI, VectorImageAPI, WidgetComponentDataServiceAPI, Wix2StudioAPI</p>
+</div></div>
+
+<h2>DERIVATIVE_STATE &mdash; 69/90 in whitelist (76.7%)</h2>
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3><span class="lbadge lbadge-deriv">DERIVATIVE_STATE</span> &nbsp;69 whitelisted</h3><span class="m">21 excluded</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<p style="color:var(--red)"><strong>Excluded (21):</strong> BranchesDerivativeStateAPI, ComponentDataDerivativeStateAPI, ComponentDistanceAPI, ComponentPickerDerivativeStatePrivateAPI, DetectOverflowAPI, FlexComponentDerivativeStateAPI, GenericBreakpointsUtilsAPI, ImageAsSectionBackgroundDerivativeStateAPI, InspectorSectionPositionAPI, InteractionsDerivativeStateAPI, PageCanvasSizeAPI, PagePreviewCanvasSizeAPI, PresetsUtilsAPI, RepetitiveItemsDerivativeStateAPI, ReservedPagesDerivativeStateAPI, ScaleProportionallyDerivativeStateAPI, SectionHoverDerivativeStateAPI, SiteCheckDerivativeStateAPI, SizingBehaviorStyleDerivativeStateAPI, ThemedComponentsDerivativeStateAPI, UserColorsDerivativeStateAPI</p>
+</div></div>
+
+<h2>FLOWS &mdash; 175/229 in whitelist (76.4%)</h2>
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3><span class="lbadge lbadge-flows">FLOWS</span> &nbsp;175 whitelisted</h3><span class="m">54 excluded</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<p style="color:var(--red)"><strong>Excluded (54):</strong> AddPanelPlatformWidgetsAPI, AsyncUtilityAPI, BreakpointsBIFlowsAPI, BreakpointsFlowsAPI, ButtonThemeComponentsFlowsAPI, ColorUtilsAPI, ColorsThemesFlowsAPI, ColorsThemesFlowsBuilderAPI, ComponentFlowsAPI_deprecated, ContainerThemeComponentsFlowsAPI, ContextBindingFlowsAPI, ContextFlowsAPI, CopyFormattingAPI, CopyFormattingActionAPI, CopyPastePageAppsAPI, DataScienceModelsAPI, DebugToolsAPI, DOMSortingAIAPI, ExportToJpgAPI, FontsThemesFlowAPI, GlobalComponentsFlowsAPI, GlobalVariablesFlowsAPI, HugStackFlowsAPI, ImageAsSectionBackgroundFlowsAPI, InspectorAPI, InspectorFlowsAPI, InteractionsFlowsAPI, IssuesAPI, LayoutToolsCoordinatorFlowsAPI, LinkPanelAPI, MediaAddFlowsAPI, MediaStructureAPI, ModablePanelAPI, MultilingualAutoTranslatorAdapterAPI, OAuthFlowsAPI, RepeaterComponentFlowsAPI, RepeaterLayoutConfigurationAPI, RulesAPI, RulesBuilderAPI, SiteCheckerUtilsAPI, SiteCheckPanelsOpenersAPI, SiteOptimizerTreeRunnerAPI, StackIndicatorHoverAPI, StackSuggestionsFlowsAPI, StyleResolverAPI, TextComponentContributionAPI, TextComponentUtilsAPI, ThemeChangeFlowsAPI, ThemePanelFlowsAPI, TransitionsFlowsAPI, UserColorsFlowsAPI, UserTypographyFlowAPI, VerticalTextContributionAPI, WorkspaceVideoPlayerAPI</p>
+</div></div>
+
+<h2>UI &mdash; 67/163 in whitelist (41.1%)</h2>
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3><span class="lbadge lbadge-ui">UI</span> &nbsp;67 whitelisted</h3><span class="m">96 excluded &middot; lowest coverage</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<p style="color:var(--red)"><strong>Excluded (96):</strong> AddContentManagerPanelAPI, AddPanelAPI, AppsPanelsAPI, BorderHaloIndicatorAPI (whitelisted as entry but not matched), BorderRadiusIndicatorAPI, BottomBarAPI, BranchesUIAPI, BreadcrumbsAPI, BreakpointsPreviewBarAPI, BreakpointsUIAPI, CommonIndicatorComponentsAPI, ComponentPickerAPI, ContainerBoxIndicatorAPI, ContentMaxWidthIndicatorAPI, ContentMaxWidthUIAPI, ContentRoleAPI, ContinuousKeyboardActionAPI, ContributeAddPanelPresetsAPI, ContributeEditBoxDefaultKnobsCreatorsAPI, CopyPastePageAPI, CopyPastePageUIAPI, CorvidAPI, CorvidFlowsAPI, CropperAPI, CropperUIAPI, EditInBlocksAPI, EducationPanelAPI, EditorFontNamespaceAPI, EditorNativePlatformPanelsNamespaceAPI, EditorPanelsNamespaceAPI, EditorViewPortNamespaceAPI, EditorWorkspaceAPI, FeedbackAPI, FigmaImportContributionAPI, FlexComponentAPI, FocusBoxIndicatorAPI, GenericActionsAPI, GenericGfppExtensionsUIAPI, GfppComponentAPI, GfppExtensionsAPI, GlobalPageLimitUIAPI, GridComponentUIAPI, GroupBoxIndicatorAPI, HaloIndicatorAPI, HeaderScrollSectionUIAPI, HelpDataServiceAPI, HighlightBoxIndicatorAPI, HugStackUIActionsAPI, IdeAPI, ImageAsSectionBackgroundUIAPI, ImageXSettingsPanelAPI, InitialStylableStyleAPI, InspectorControlsIndicationUIAPI, InspectorSectionsFactoryAPI, InspectorUIAPI, InteractionsInspectorPublicUIAPI, LayersPanelAPI, LayoutToolsCoordinatorUIAPI, LibrariesButtonUIAPI, LoaderIndicatorAPI, MainBarAPI, MainMenuAPI, ManageItemsUIAPI, MasterPieceSelectionBoxIndicatorAPI, MeshLayoutUIAPI, MultilingualComponentsAPI, OverflowControlsAPI, PinnedToContainerUIAPI, PresetsAddPanelAPI, PresetsComponentsAPI, PresetsManagerAPI, PreviewMouseActionContributionAPI, PreviewSizeControlsAPI, PublishPanelsUIAPI, QuickEditAPI, RepeaterInspectorSectionsAPI, RepeaterLayoutOptionsFilterContributionAPI, RepeaterPatternsContributionsAPI, ReplaceCandidateIndicatorAPI, ResizeHandlesAPI, SaveAndPublishUIAPI, SectionBordersIndicatorAPI, ShortcutsPanelAPI, SiteCheckPanelAPI, SiteDirectionUIAPI, SitemapPanelAPI, SnapLineIndicatorAPI, StackActionIndicatorAPI, StackSuggestionsUIAPI, SuperGridPushResizeIndicatorComponentAPI, SwitchContainerLayoutFlowsAPI, TextEditorUIAPI, TextInspectorAPI, ToursAPI, ToursHelpersAPI, ToursManagerAPI, UnitInputUtilsAPI, UnstretchBackgroundIndicatorAPI, VariablesColorPickerUIAPI, VideoBoxMaskAPI, VideoBoxSettingsAPI, ViewportBoxIndicatorAPI</p>
+</div></div>
+
+<h2>VERTICAL &mdash; 5/11 in whitelist (45.5%)</h2>
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3><span class="lbadge lbadge-vert">VERTICAL</span> &nbsp;5 whitelisted</h3><span class="m">6 excluded</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="api-grid">
+<span>ComponentModelAPI</span><span>GenericInteractionsAPI</span><span>MultiEditorAuthorizationAPI</span><span>MultiEditorFlowBranchingAPI</span><span>MultiEditorMetadataAPI</span>
+</div>
+<p style="margin-top:8px;color:var(--red)"><strong>Excluded (6):</strong> DefaultComponentEditorCreatorAPI, ExternalComponentAPI, GenericComponentsUIBehaviorAPI, GfppComponentEnhancerCreatorAPI, MultiEditorUiBehaviorsAPI, ScriptoAPI</p>
+</div></div>
+
+</div><!-- /whitelist-perlayer -->
+
+<!-- Not in Whitelist subtab -->
+<div id="whitelist-excluded" class="subtab-content">
+
+<h2>254 Core APIs Not in Whitelist</h2>
+<p>These editorx-core-api SlotKey APIs are not referenced (as declared or dependency) in any whitelisted topology entry. They are either unused by Harmony or consumed by other editors (Blocks, Classic, etc.).</p>
+
+<table>
+  <tr><th>Layer</th><th>Excluded</th><th>Total</th><th>% Excluded</th></tr>
+  <tr><td><span class="lbadge lbadge-ui">UI</span></td><td><strong>96</strong></td><td>163</td><td>58.9%</td></tr>
+  <tr><td><span class="lbadge lbadge-flows">FLOWS</span></td><td>54</td><td>229</td><td>23.6%</td></tr>
+  <tr><td><span class="lbadge lbadge-data">DATA_SERVICE</span></td><td>48</td><td>202</td><td>23.8%</td></tr>
+  <tr><td><span class="lbadge lbadge-deriv">DERIVATIVE_STATE</span></td><td>21</td><td>90</td><td>23.3%</td></tr>
+  <tr><td><span class="lbadge lbadge-site">SITE</span></td><td>12</td><td>61</td><td>19.7%</td></tr>
+  <tr><td><span class="lbadge lbadge-vert">VERTICAL</span></td><td>6</td><td>11</td><td>54.5%</td></tr>
+  <tr><td><span class="lbadge lbadge-infra">EDITOR_INFRA</span></td><td>3</td><td>39</td><td>7.7%</td></tr>
+  <tr style="font-weight:600"><td>Total</td><td>254</td><td>811</td><td>31.3%</td></tr>
+</table>
+
+<h2>Notable Excluded APIs</h2>
+<div class="finding"><strong>Inspector ecosystem</strong> &mdash; InspectorAPI, InspectorFlowsAPI, InspectorUIAPI, InspectorSectionsFactoryAPI, InspectorSectionStateAPI + contributions. Harmony has its own inspector implementation.</div>
+<div class="finding"><strong>Theme/Color system</strong> &mdash; ThemeChangeFlowsAPI, ThemePanelFlowsAPI, ColorsThemesFlowsAPI, UserColorsFlowsAPI, UserTypographyFlowAPI. Harmony uses its own theming.</div>
+<div class="finding"><strong>Interactions framework</strong> &mdash; InteractionsFlowsAPI, InteractionsDerivativeStateAPI, InteractionsConfigurationAPI, InteractionsContributionAPI, InteractionsInspectorPublicUIAPI.</div>
+<div class="finding"><strong>Mobile/Responsive</strong> &mdash; MobileAlgoDataServiceAPI, MobileAlgoLockingDataServiceAPI. Harmony doesn't support mobile algo.</div>
+<div class="finding"><strong>Dealer/Commerce</strong> &mdash; DealerBiAPI, DealerDataAPI, DealerPlacementAPI, DealerStateAPI, DealerClientAPI. Not relevant for Harmony.</div>
+<div class="finding"><strong>Corvid/IDE</strong> &mdash; CorvidAPI, CorvidFlowsAPI, IdeAPI. Different developer tools stack.</div>
+
+</div><!-- /whitelist-excluded -->
+
+<!-- Methodology subtab -->
+<div id="whitelist-methodology" class="subtab-content">
+
+<h2>Data Sources</h2>
+<table>
+  <tr><th>Source</th><th>Path</th></tr>
+  <tr><td>Whitelist lock file</td><td><code>odeditor-packages-new/apps/bundle/topology-entries.lock.yaml</code></td></tr>
+  <tr><td>Core API definitions</td><td><code>responsive-editor-packages/packages/editorx-core-api/src/</code></td></tr>
+</table>
+
+<h2>Matching Algorithm</h2>
+<ol>
+  <li>Extracted all <code>declareAPIs</code> and <code>dependencyAPIs</code> values from the lock file's metadata section (1,062 unique API names)</li>
+  <li>Extracted all <code>export const XxxAPI: SlotKey</code> definitions from editorx-core-api <code>.ts</code> files, capturing both the <code>name</code> field and the variable name (811 total)</li>
+  <li>Normalization: strip spaces, underscores, hyphens, dots, then lowercase. E.g., <code>"Component Data API"</code> &rarr; <code>"componentdataapi"</code> matches <code>"ComponentDataAPI"</code></li>
+  <li>Two-pass matching: first against SlotKey <code>name</code> field, then against variable name</li>
+</ol>
+
+<h2>Matching Quality</h2>
+<div class="finding">Verified by spot-checking ~30 suspect APIs from the 505 unmatched list. Within <code>editorx-core-api</code> scope, only 1 false negative: <code>Theme API</code> vs <code>Site Theme API</code> (name collision).</div>
+<div class="finding" style="border-color:var(--orange)"><strong>Known limitation:</strong> The scan only checked SlotKey definitions in <code>editorx-core-api/src/</code>. It did <strong>not</strong> scan <code>repluggable-addons-api</code>, <code>repluggable-workspace</code>, <code>repluggable-commands</code>, or other REP packages. APIs like <strong>PanelsAPI</strong>, <strong>HybridStoreAPI</strong>, <strong>WorkspaceAPI</strong>, <strong>MouseAPI</strong> are SlotKeys defined in those sibling packages. editorx-core-api sometimes re-exports them (e.g., <code>export { HybridStoreAPI } from '@wix/repluggable-addons-api'</code>), but re-exports don't match the <code>export const XxxAPI: SlotKey</code> pattern used by the scanner. A complete analysis would need to scan all REP packages or follow re-exports.</div>
+
+<h2>Whitelist Count vs Harmony Source Import Count</h2>
+<table>
+  <tr><th>Metric</th><th>Count</th><th>Note</th></tr>
+  <tr><td>Core APIs in whitelist</td><td>557</td><td>Available at runtime via entry-points + transitive deps</td></tr>
+  <tr><td>Core APIs directly imported in Harmony source</td><td>275</td><td>Actually referenced in <code>.ts/.tsx</code> files</td></tr>
+  <tr><td>Gap (transitive only)</td><td>~282</td><td>Loaded but not directly referenced &mdash; deps of deps</td></tr>
+</table>
+<p>The 282 "transitive only" APIs are loaded because whitelisted entry-points depend on them, even though Harmony code doesn't import them directly. They represent potential bundle size savings if entry-points were split more granularly.</p>
+
+</div><!-- /whitelist-methodology -->
+
+</div><!-- /whitelist -->
+
+<!-- ========== PAGES ========== -->
+<div id="pages" class="tab-content">
+<div class="stats">
+  <div class="stat"><div class="v">6</div><div class="l">Harmony APIs</div></div>
+  <div class="stat"><div class="v">23</div><div class="l">REP Deps</div></div>
+  <div class="stat"><div class="v">6</div><div class="l">Domain Pkgs</div></div>
+  <div class="stat"><div class="v">9</div><div class="l">Max Deps</div></div>
+</div>
+<div class="subtabs">
+  <button class="subtab-btn active" onclick="showSub('pages','diagrams',this)">Diagrams</button>
+  <button class="subtab-btn" onclick="showSub('pages','summary',this)">Summary</button>
+</div>
+
+<div id="pages-diagrams" class="subtab-content active">
+
+<!-- Pages: Current State -->
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>Current State (Monolithic)</h3><span class="m">All 232 APIs in one package</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep">
+  <div class="dep-source">odeditor-package-pages<small>6 Harmony APIs</small></div>
+  <div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-monolith"><div class="dom-h">editorx-core-api (monolith)</div><div class="dom-b">
+      <span>PagesDataServiceAPI</span><span>PagesAPI</span><span>PagesFlowsAPI</span><span>PlatformPagesAPI</span><span>DocumentServicesAPI</span><span>ExperimentsAPI</span><span>ResponsiveFedopsAPI</span><span>UserActionAPI</span><span>ResponsiveBIAPI</span><span>PresenceBIParamsAPI</span>
+    </div></div>
+    <div class="dom dom-addons"><div class="dom-h">repluggable-addons-api</div><div class="dom-b">
+      <span>PanelsAPI</span><span>HybridStoreAPI</span>
+    </div></div>
+    <div class="dom dom-shared"><div class="dom-h">odeditor-shared-apis</div><div class="dom-b">
+      <span>FragmentsAPI</span><span>AIAssistantFlowsAPI</span><span>PagesBiDataAPI</span><span>OdeditorBreakpointsAPI</span>
+    </div></div>
+  </div>
+</div>
+<p style="margin-top:12px"><strong>Problems:</strong> Monolithic package, PagesPanelsAPI has 9 deps, PagesDataServiceAPI used by 4/6 APIs, no domain boundaries.</p>
+</div></div>
+
+<!-- Pages: After Refactoring -->
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>After Refactoring (Domain-Based)</h3><span class="m">6 focused domain packages</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep">
+  <div class="dep-source">odeditor-package-pages<small>PagesPanelsAPI &middot; PagesActionsBiAPI &middot; PagesDerivativeStateAPI &middot; PagesActionsAPI &middot; PagesOrderAPI &middot; PagesUIAPI</small></div>
+  <div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-pages"><div class="dom-h">editorx-api-pages</div><div class="dom-b">
+      <span>PagesFlowsAPI</span><span>PagesDataServiceAPI</span><span>PagesAPI</span>
+    </div></div>
+    <div class="dom dom-platform"><div class="dom-h">editorx-api-platform</div><div class="dom-b">
+      <span>PlatformPagesAPI</span>
+    </div></div>
+    <div class="dom dom-document"><div class="dom-h">editorx-api-document</div><div class="dom-b">
+      <span>DocumentServicesAPI</span>
+    </div></div>
+    <div class="dom dom-monitoring"><div class="dom-h">editorx-api-monitoring</div><div class="dom-b">
+      <span>UserActionAPI</span><span>ResponsiveFedopsAPI</span><span>ResponsiveBIAPI</span><span>PresenceBIParamsAPI</span>
+    </div></div>
+    <div class="dom dom-ui-infra"><div class="dom-h">editorx-api-ui-infra</div><div class="dom-b">
+      <span>PanelsAPI</span><span>HybridStoreAPI</span>
+    </div></div>
+    <div class="dom dom-core"><div class="dom-h">editorx-api-core</div><div class="dom-b">
+      <span>ExperimentsAPI</span>
+    </div></div>
+  </div>
+</div>
+</div></div>
+
+</div><!-- /pages-diagrams -->
+<div id="pages-summary" class="subtab-content">
+<h2>Dependency Summary</h2>
+<table>
+  <tr><th>Harmony API</th><th>REP Deps</th><th>Packages</th><th>Complexity</th></tr>
+  <tr><td><strong>PagesPanelsAPI</strong></td><td>9</td><td>4</td><td><span class="badge badge-high">High</span></td></tr>
+  <tr><td><strong>PagesActionsBiAPI</strong></td><td>5</td><td>3</td><td><span class="badge badge-medium">Medium</span></td></tr>
+  <tr><td><strong>PagesDerivativeStateAPI</strong></td><td>4</td><td>3</td><td><span class="badge badge-medium">Medium</span></td></tr>
+  <tr><td><strong>PagesActionsAPI</strong></td><td>3</td><td>3</td><td><span class="badge badge-low">Low</span></td></tr>
+  <tr><td><strong>PagesOrderAPI</strong></td><td>2</td><td>2</td><td><span class="badge badge-low">Low</span></td></tr>
+  <tr><td><strong>PagesUIAPI</strong></td><td>0</td><td>0</td><td><span class="badge badge-none">None</span></td></tr>
+</table>
+<h2>Key REP APIs</h2>
+<table>
+  <tr><th>API</th><th>Used By</th></tr>
+  <tr><td>PagesDataServiceAPI</td><td>4/6 Harmony APIs (core dependency)</td></tr>
+  <tr><td>ExperimentsAPI</td><td>PagesPanelsAPI, PagesOrderAPI, PagesDerivativeStateAPI</td></tr>
+  <tr><td>PlatformPagesAPI</td><td>PagesActionsAPI, PagesDerivativeStateAPI, PagesPanelsAPI</td></tr>
+  <tr><td>PanelsAPI</td><td>PagesActionsAPI, PagesPanelsAPI, PagesActionsBiAPI</td></tr>
+</table>
+</div>
+</div>
+
+<!-- ========== SUPERGRID ========== -->
+<div id="supergrid" class="tab-content">
+<div class="stats">
+  <div class="stat"><div class="v">12</div><div class="l">Harmony APIs</div></div>
+  <div class="stat"><div class="v">49</div><div class="l">REP Deps</div></div>
+  <div class="stat"><div class="v">6</div><div class="l">Domain Pkgs</div></div>
+  <div class="stat"><div class="v">22</div><div class="l">Max Deps</div></div>
+</div>
+<div class="subtabs">
+  <button class="subtab-btn active" onclick="showSub('supergrid','diagrams',this)">Diagrams</button>
+  <button class="subtab-btn" onclick="showSub('supergrid','summary',this)">Summary</button>
+</div>
+
+<div id="supergrid-diagrams" class="subtab-content active">
+
+<!-- SG1: SuperGridLayoutAPI -->
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>1. SuperGridLayoutAPI</h3><span class="m">22 deps &middot; 6 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep">
+  <div class="dep-source">SuperGridLayoutAPI<small>odeditor-package-section</small></div>
+  <div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-grid"><div class="dom-h">grid</div><div class="dom-b"><span>GridDerivativeStateAPI</span><span>GridFlowsAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridDerivativeStateAPI</span><span>SuperGridCellFlowsAPI</span><span>SuperGridUIFlowsAPI</span></div></div>
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentFlowsAPI</span><span>ComponentHierarchyAPI</span><span>ComponentInteractionAPI</span><span>ComponentLayoutDerivativeStateAPI</span><span>ComponentLayoutFlowsAPI</span><span>ComponentPointerBuilderAPI</span><span>ComponentPointerFactoryAPI</span><span>ComponentRoutingAPI</span><span>ComponentSpacingFlowsAPI</span><span>ComponentStretchFlowsAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>EditorPointerAPI</span><span>EditorSettingsAPI</span><span>StageContextBuilderAPI</span></div></div>
+    <div class="dom dom-sizing"><div class="dom-h">sizing-layout</div><div class="dom-b"><span>SizingBehaviorPresetFlowsAPI</span><span>SystemContainerDerivativeStateAPI</span></div></div>
+    <div class="dom dom-document"><div class="dom-h">document</div><div class="dom-b"><span>DocumentServicesAPI</span></div></div>
+  </div>
+  <div class="dep-int"><span class="dep-int-label">internal:</span><span>SuperGridDomOrderAPI</span></div>
+</div>
+</div></div>
+
+<!-- SG2: SuperGridSettingsAPI -->
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>2. SuperGridSettingsAPI</h3><span class="m">11 deps &middot; 4 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep">
+  <div class="dep-source">SuperGridSettingsAPI<small>odeditor-package-section</small></div>
+  <div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-grid"><div class="dom-h">grid</div><div class="dom-b"><span>GridGapsUIAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridCellFlowsAPI</span><span>SuperGridUIFlowsAPI</span></div></div>
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentDataAPI</span><span>ComponentDataFlowsAPI</span><span>ComponentHierarchyAPI</span><span>ComponentLayoutDerivativeStateAPI</span><span>ComponentSpacingFlowsAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>EditorPointerAPI</span><span>EditorUIAPI</span><span>StageContextBuilderAPI</span></div></div>
+  </div>
+  <div class="dep-int"><span class="dep-int-label">internal:</span><span>SuperGridDomOrderAPI</span></div>
+</div>
+</div></div>
+
+<!-- SG3: SuperGridDomOrderAPI -->
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>3. SuperGridDomOrderAPI</h3><span class="m">4 deps &middot; 2 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep">
+  <div class="dep-source">SuperGridDomOrderAPI<small>odeditor-package-section</small></div>
+  <div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>AutoDOMDerivativeStateAPI</span><span>AutoDOMOrderFlowsAPI</span><span>EditorSettingsAPI</span></div></div>
+    <div class="dom dom-sizing"><div class="dom-h">sizing-layout</div><div class="dom-b"><span>SystemContainerDerivativeStateAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<!-- SG4: SuperGridPanel -->
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>4. SuperGridPanel</h3><span class="m">25 deps &middot; 8 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep">
+  <div class="dep-source">SuperGridPanel<small>odeditor-package-section</small></div>
+  <div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-grid"><div class="dom-h">grid</div><div class="dom-b"><span>GridDerivativeStateAPI</span><span>GridGapsUIAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridCellDerivativeStateAPI</span><span>SuperGridCellFlowsAPI</span><span>SuperGridDerivativeStateAPI</span><span>SuperGridUIFlowsAPI</span></div></div>
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentHierarchyAPI</span><span>ComponentInteractionAPI</span><span>ComponentLayoutDerivativeStateAPI</span><span>ComponentPointerBuilderAPI</span><span>ComponentSpacingDerivativeStateAPI</span><span>ComponentSpacingFlowsAPI</span><span>ComponentTypeAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>AutoDOMDerivativeStateAPI</span><span>EditorPointerAPI</span><span>EditorSettingsAPI</span><span>EditorUIAPI</span><span>PreviewDisplayAPI</span><span>StageContextBuilderAPI</span></div></div>
+    <div class="dom dom-sizing"><div class="dom-h">sizing-layout</div><div class="dom-b"><span>PositionBoxDataServiceAPI</span><span>SystemContainerDerivativeStateAPI</span></div></div>
+    <div class="dom dom-monitoring"><div class="dom-h">monitoring</div><div class="dom-b"><span>UserActionAPI</span></div></div>
+    <div class="dom dom-core"><div class="dom-h">core</div><div class="dom-b"><span>ExperimentsAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<!-- SG5-8: BI APIs -->
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>5. SuperGridActionBarBIAPI</h3><span class="m">7 deps &middot; 5 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep">
+  <div class="dep-source">SuperGridActionBarBIAPI<small>odeditor-package-section</small></div>
+  <div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-grid"><div class="dom-h">grid</div><div class="dom-b"><span>GridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentInteractionAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>StageContextBuilderAPI</span></div></div>
+    <div class="dom dom-monitoring"><div class="dom-h">monitoring</div><div class="dom-b"><span>UserActionAPI</span></div></div>
+    <div class="dom dom-data"><div class="dom-h">data</div><div class="dom-b"><span>TraverseDataServiceAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>6. SuperGridSettingsBIAPI</h3><span class="m">7 deps &middot; 4 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep">
+  <div class="dep-source">SuperGridSettingsBIAPI<small>odeditor-package-section</small></div>
+  <div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-grid"><div class="dom-h">grid</div><div class="dom-b"><span>GridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentInteractionAPI</span><span>ComponentSpacingDerivativeStateAPI</span><span>ComponentTypeAPI</span></div></div>
+    <div class="dom dom-monitoring"><div class="dom-h">monitoring</div><div class="dom-b"><span>UserActionAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>7. SuperGridLayoutPanelBIAPI</h3><span class="m">8 deps &middot; 5 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep">
+  <div class="dep-source">SuperGridLayoutPanelBIAPI<small>odeditor-package-section</small></div>
+  <div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-grid"><div class="dom-h">grid</div><div class="dom-b"><span>GridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentInteractionAPI</span><span>ComponentTypeAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>EditorSettingsAPI</span><span>StageContextBuilderAPI</span></div></div>
+    <div class="dom dom-monitoring"><div class="dom-h">monitoring</div><div class="dom-b"><span>UserActionAPI</span></div></div>
+    <div class="dom dom-data"><div class="dom-h">data</div><div class="dom-b"><span>PagesDataServiceAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>8. SuperGridAutomaticPanelAPI</h3><span class="m">9 deps &middot; 4 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep">
+  <div class="dep-source">SuperGridAutomaticPanelAPI<small>odeditor-package-section</small></div>
+  <div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-grid"><div class="dom-h">grid</div><div class="dom-b"><span>GridGapsUIAPI</span></div></div>
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentInteractionAPI</span><span>ComponentSpacingDerivativeStateAPI</span><span>ComponentSpacingFlowsAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>AutoPanelsAPI</span><span>EditorPointerAPI</span></div></div>
+    <div class="dom dom-ui-infra"><div class="dom-h">ui-infra</div><div class="dom-b"><span>PanelsAPI</span><span>WorkspaceAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<!-- SG9: SuperGridLinesIndicatorAPI -->
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>9. SuperGridLinesIndicatorAPI</h3><span class="m">19 deps &middot; 7 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep">
+  <div class="dep-source">SuperGridLinesIndicatorAPI<small>odeditor-package-stage-indicators</small></div>
+  <div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-grid"><div class="dom-h">grid</div><div class="dom-b"><span>GridDerivativeStateAPI</span><span>GridFlowsAPI</span><span>GridGapsUIAPI</span><span>GridIndicatorsContainerAPI</span><span>GridPushAndResizeUIAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentHierarchyAPI</span><span>ComponentInteractionAPI</span><span>ComponentMeasureAPI</span><span>ComponentTypeAPI</span><span>ComponentUpdatesAggregatorAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>EditorUIAPI</span><span>StageContextBuilderAPI</span><span>SynchronizedUIComponentsAPI</span></div></div>
+    <div class="dom dom-sizing"><div class="dom-h">sizing-layout</div><div class="dom-b"><span>SystemContainerDerivativeStateAPI</span></div></div>
+    <div class="dom dom-data"><div class="dom-h">data</div><div class="dom-b"><span>TraverseDataServiceAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<!-- SG10-12 -->
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>10. SuperGridPushResizeIndicatorAPI</h3><span class="m">13 deps &middot; 7 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep">
+  <div class="dep-source">SuperGridPushResizeIndicatorAPI<small>odeditor-package-stage-indicators</small></div>
+  <div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-grid"><div class="dom-h">grid</div><div class="dom-b"><span>GridDerivativeStateAPI</span><span>GridPushAndResizeUIAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentMeasureAPI</span><span>ComponentSpacingDerivativeStateAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>StageContextBuilderAPI</span><span>WithIndicationsHoverAPI</span></div></div>
+    <div class="dom dom-sizing"><div class="dom-h">sizing-layout</div><div class="dom-b"><span>ProximityToEdgeDerivativeStateAPI</span><span>SizingBehaviorPresetDerivativeStateAPI</span><span>SystemContainerDerivativeStateAPI</span></div></div>
+    <div class="dom dom-monitoring"><div class="dom-h">monitoring</div><div class="dom-b"><span>UserActionAPI</span></div></div>
+    <div class="dom dom-ui-infra"><div class="dom-h">ui-infra</div><div class="dom-b"><span>MouseAPI</span><span>UxResourcesAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>11. SuperGridComponentEditor</h3><span class="m">13 deps &middot; 6 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep">
+  <div class="dep-source">SuperGridComponentEditor<small>odeditor-package-component-editors</small></div>
+  <div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-grid"><div class="dom-h">grid</div><div class="dom-b"><span>GridSectionsAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridCellDerivativeStateAPI</span><span>SuperGridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentEditorBuilderAPI</span><span>ComponentHierarchyAPI</span><span>ComponentRoutingAPI</span><span>ComponentTypeAPI</span><span>ComponentVisibilityDerivativeStateAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>StageContextBuilderAPI</span></div></div>
+    <div class="dom dom-data"><div class="dom-h">data</div><div class="dom-b"><span>PagesDataServiceAPI</span><span>PointerComparisonAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>12. SuperGridCellComponentEditor</h3><span class="m">7 deps &middot; 4 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep">
+  <div class="dep-source">SuperGridCellComponentEditor<small>odeditor-package-component-editors</small></div>
+  <div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridCellDerivativeStateAPI</span></div></div>
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentEditorBuilderAPI</span><span>ComponentHierarchyAPI</span><span>ComponentTypeAPI</span></div></div>
+    <div class="dom dom-sizing"><div class="dom-h">sizing-layout</div><div class="dom-b"><span>SystemContainerDerivativeStateAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+</div><!-- /supergrid-diagrams -->
+
+<div id="supergrid-summary" class="subtab-content">
+<h2>Dependency Summary</h2>
+<table>
+  <tr><th>API</th><th>Package</th><th>Deps</th><th>Domains</th></tr>
+  <tr><td><strong>SuperGridPanel</strong></td><td>section</td><td>25</td><td>8</td></tr>
+  <tr><td><strong>SuperGridLayoutAPI</strong></td><td>section</td><td>22</td><td>6</td></tr>
+  <tr><td><strong>SuperGridLinesIndicatorAPI</strong></td><td>stage-indicators</td><td>19</td><td>7</td></tr>
+  <tr><td><strong>SuperGridPushResizeIndicatorAPI</strong></td><td>stage-indicators</td><td>13</td><td>7</td></tr>
+  <tr><td><strong>SuperGridComponentEditor</strong></td><td>component-editors</td><td>13</td><td>6</td></tr>
+  <tr><td><strong>SuperGridSettingsAPI</strong></td><td>section</td><td>11</td><td>4</td></tr>
+  <tr><td><strong>SuperGridAutomaticPanelAPI</strong></td><td>section</td><td>9</td><td>4</td></tr>
+  <tr><td><strong>SuperGridLayoutPanelBIAPI</strong></td><td>section</td><td>8</td><td>5</td></tr>
+  <tr><td><strong>SuperGridActionBarBIAPI</strong></td><td>section</td><td>7</td><td>5</td></tr>
+  <tr><td><strong>SuperGridSettingsBIAPI</strong></td><td>section</td><td>7</td><td>4</td></tr>
+  <tr><td><strong>SuperGridCellComponentEditor</strong></td><td>component-editors</td><td>7</td><td>4</td></tr>
+  <tr><td><strong>SuperGridDomOrderAPI</strong></td><td>section</td><td>4</td><td>2</td></tr>
+</table>
+</div>
+
+</div><!-- /supergrid -->
+
+<!-- ========== INDICATORS ========== -->
+<div id="indicators" class="tab-content">
+<div class="stats">
+  <div class="stat"><div class="v">51</div><div class="l">Indicator APIs</div></div>
+  <div class="stat"><div class="v">70+</div><div class="l">REP Deps</div></div>
+  <div class="stat"><div class="v">17</div><div class="l">Domain Pkgs</div></div>
+  <div class="stat"><div class="v">21</div><div class="l">Max Deps</div></div>
+</div>
+<div class="subtabs">
+  <button class="subtab-btn active" onclick="showSub('indicators','box',this)">Box</button>
+  <button class="subtab-btn" onclick="showSub('indicators','resize',this)">Resize</button>
+  <button class="subtab-btn" onclick="showSub('indicators','grid',this)">Grid</button>
+  <button class="subtab-btn" onclick="showSub('indicators','section',this)">Section/Snap</button>
+  <button class="subtab-btn" onclick="showSub('indicators','features',this)">Features/BI</button>
+  <button class="subtab-btn" onclick="showSub('indicators','summary',this)">Summary</button>
+</div>
+
+<!-- Box -->
+<div id="indicators-box" class="subtab-content active">
+
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>1. HoverBoxIndicatorAPI</h3><span class="m">12 REP &middot; 8 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep"><div class="dep-source">HoverBoxIndicatorAPI</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentMeasureAPI</span><span>ComponentRotationDerivativeStateAPI</span><span>ComponentsDerivativeStateAPI</span><span>ComponentRoutingAPI</span><span>SharedBlocksAPI</span></div></div>
+    <div class="dom dom-document"><div class="dom-h">document</div><div class="dom-b"><span>DocumentStructureAPI</span></div></div>
+    <div class="dom dom-indications"><div class="dom-h">indications</div><div class="dom-b"><span>IndicationsAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridCellDerivativeStateAPI</span></div></div>
+    <div class="dom dom-data"><div class="dom-h">data</div><div class="dom-b"><span>PointerComparisonAPI</span><span>TraverseDataServiceAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>WithIndicationsHoverAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>3. EditBoxIndicatorAPI</h3><span class="m">17 REP &middot; 8 domains &middot; most complex</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep"><div class="dep-source">EditBoxIndicatorAPI</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentDataAPI</span><span>ComponentEditorAPI</span><span>ComponentLayoutAPI_deprecated</span><span>ComponentMeasureAPI</span><span>ComponentRotationDerivativeStateAPI</span><span>ComponentRoutingAPI</span><span>ComponentTypeAPI</span></div></div>
+    <div class="dom dom-document"><div class="dom-h">document</div><div class="dom-b"><span>DocumentStructureAPI</span></div></div>
+    <div class="dom dom-indications"><div class="dom-h">indications</div><div class="dom-b"><span>IndicationsAPI</span><span>IndicationParamsContributionAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridCellDerivativeStateAPI</span></div></div>
+    <div class="dom dom-data"><div class="dom-h">data</div><div class="dom-b"><span>TraverseDataServiceAPI</span></div></div>
+    <div class="dom dom-transforms"><div class="dom-h">transforms</div><div class="dom-b"><span>DetachAPI</span><span>RotateTransitionAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>PreviewAPI</span><span>WithIndicationsHoverAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>6-7. FocusBox / CustomBox</h3><span class="m">2-3 REP deps each</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep"><div class="dep-source">FocusBox &amp; CustomBox IndicatorAPI</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI (Focus only)</span><span>ComponentMeasureAPI</span><span>ComponentRotationDerivativeStateAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>8. MasterPieceHoverIndicatorAPI</h3><span class="m">9 REP &middot; 4 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep"><div class="dep-source">MasterPieceHoverIndicatorAPI</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentMeasureAPI</span><span>ComponentRoutingAPI</span><span>ComponentsDerivativeStateAPI</span><span>ComponentTypeAPI</span><span>RefComponentAPI</span><span>SharedBlocksAPI</span></div></div>
+    <div class="dom dom-indications"><div class="dom-h">indications</div><div class="dom-b"><span>IndicationsAPI</span></div></div>
+    <div class="dom dom-data"><div class="dom-h">data</div><div class="dom-b"><span>TraverseDataServiceAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+</div><!-- /box -->
+
+<!-- Resize -->
+<div id="indicators-resize" class="subtab-content">
+
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>10. ResizeIndicatorAPI</h3><span class="m">4 REP &middot; 3 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep"><div class="dep-source">ResizeIndicatorAPI</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentMeasureAPI</span><span>ComponentRotationDerivativeStateAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridDerivativeStateAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>15. ResizablePaddingIndicatorAPI</h3><span class="m">18 REP &middot; 7 domains &middot; most complex</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep"><div class="dep-source">ResizablePaddingIndicatorAPI</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentEditorStateAPI</span><span>ComponentLayoutDerivativeStateAPI</span><span>ComponentMeasureAPI</span><span>ComponentSpacingDerivativeStateAPI</span></div></div>
+    <div class="dom dom-spacing"><div class="dom-h">spacing</div><div class="dom-b"><span>ResizablePaddingComponentUIAPI</span><span>ResizablePaddingFlowsAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>PreviewDisplayAPI</span><span>SynchronizedUIComponentsAPI</span><span>UserPreferencesSyncAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-sizing"><div class="dom-h">sizing-layout</div><div class="dom-b"><span>LayoutHeuristicsAPI</span><span>ProximityToEdgeDerivativeStateAPI</span><span>SystemContainerDerivativeStateAPI</span></div></div>
+    <div class="dom dom-data"><div class="dom-h">data</div><div class="dom-b"><span>PagesDataServiceAPI</span><span>TraverseDataServiceAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>18. ResizableGapIndicatorUIAPI</h3><span class="m">6 REP &middot; 4 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep"><div class="dep-source">ResizableGapIndicatorUIAPI</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentMeasureAPI</span><span>ComponentUpdatesAggregatorAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>EditorPointerAPI</span><span>EditorUIAPI</span></div></div>
+    <div class="dom dom-grid"><div class="dom-h">grid</div><div class="dom-b"><span>GridFlowsAPI</span></div></div>
+    <div class="dom dom-sizing"><div class="dom-h">sizing-layout</div><div class="dom-b"><span>SystemContainerDerivativeStateAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+</div><!-- /resize -->
+
+<!-- Grid -->
+<div id="indicators-grid" class="subtab-content">
+
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>19. GridSectionResizeIndicatorAPI</h3><span class="m">15 REP &middot; 8 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep"><div class="dep-source">GridSectionResizeIndicatorAPI</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentInteractionAPI</span><span>ComponentLayoutDerivativeStateAPI</span><span>ComponentLayoutFlowsAPI</span><span>ComponentMeasureAPI</span><span>ComponentRoutingAPI</span><span>ComponentTypeAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>StageContextBuilderAPI</span><span>WithIndicationsHoverAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-data"><div class="dom-h">data</div><div class="dom-b"><span>TraverseDataServiceAPI</span></div></div>
+    <div class="dom dom-monitoring"><div class="dom-h">monitoring</div><div class="dom-b"><span>UserActionAPI</span></div></div>
+    <div class="dom dom-core"><div class="dom-h">core</div><div class="dom-b"><span>ExperimentsAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>31. GapHighlightIndicatorAPI</h3><span class="m">6 REP &middot; 5 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep"><div class="dep-source">GapHighlightIndicatorAPI</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentMeasureAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>StageContextBuilderAPI</span></div></div>
+    <div class="dom dom-grid"><div class="dom-h">grid</div><div class="dom-b"><span>GridIndicatorsContainerAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-sizing"><div class="dom-h">sizing-layout</div><div class="dom-b"><span>SystemContainerDerivativeStateAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>34. ResizeCellHighlightIndicatorAPI</h3><span class="m">6 REP &middot; 5 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep"><div class="dep-source">ResizeCellHighlightIndicatorAPI</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentMeasureAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>StageContextBuilderAPI</span></div></div>
+    <div class="dom dom-grid"><div class="dom-h">grid</div><div class="dom-b"><span>GridDerivativeStateAPI</span><span>GridIndicatorsContainerAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-sizing"><div class="dom-h">sizing-layout</div><div class="dom-b"><span>SystemContainerDerivativeStateAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+</div><!-- /grid -->
+
+<!-- Section/Snap -->
+<div id="indicators-section" class="subtab-content">
+
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>22. SectionActionsIndicatorAPI</h3><span class="m">14 REP &middot; 7 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep"><div class="dep-source">SectionActionsIndicatorAPI</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentInteractionAPI</span><span>ComponentMeasureAPI</span><span>ComponentRoutingAPI</span><span>ComponentTypeAPI</span><span>ComponentsLabelHandlerAPI</span></div></div>
+    <div class="dom dom-sections"><div class="dom-h">sections</div><div class="dom-b"><span>HeaderEffectsFlowsAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>PreviewDisplayAPI</span><span>StageContextBuilderAPI</span><span>WithIndicationsHoverAPI</span></div></div>
+    <div class="dom dom-data"><div class="dom-h">data</div><div class="dom-b"><span>PagesDataServiceAPI</span><span>TraverseDataServiceAPI</span></div></div>
+    <div class="dom dom-monitoring"><div class="dom-h">monitoring</div><div class="dom-b"><span>UserActionAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>30. SnapAPI</h3><span class="m">13 REP &middot; 5 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep"><div class="dep-source">SnapAPI</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentHierarchyAPI</span><span>ComponentLayoutDerivativeStateAPI</span><span>ComponentMeasureAPI</span><span>ComponentRotationDerivativeStateAPI</span><span>ComponentTypeAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>EditorCacheAPI</span><span>EditorPlatformAPI</span><span>PreviewDisplayAPI</span></div></div>
+    <div class="dom dom-data"><div class="dom-h">data</div><div class="dom-b"><span>PagesDataServiceAPI</span><span>PointerComparisonAPI</span><span>TraverseDataServiceAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>35. PresenceHighlightBoxIndicatorAPI</h3><span class="m">6 REP &middot; 3 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep"><div class="dep-source">PresenceHighlightBoxIndicatorAPI</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentMeasureAPI</span><span>SharedBlocksAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>PreviewAPI</span></div></div>
+    <div class="dom dom-presence"><div class="dom-h">presence</div><div class="dom-b"><span>PresenceDerivativeStateAPI</span><span>PresenceExperienceIndicatorAPI</span><span>PresenceFlowsAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+</div><!-- /section -->
+
+<!-- Features/BI -->
+<div id="indicators-features" class="subtab-content">
+
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>F2. SectionNameIndicator</h3><span class="m">18 REP &middot; 8 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep"><div class="dep-source">SectionNameIndicator</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentAnchorsDataServiceAPI</span><span>ComponentEditorAPI</span><span>ComponentHierarchyAPI</span><span>ComponentInteractionAPI</span><span>ComponentsLabelHandlerAPI</span><span>ComponentTypeAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridCellDerivativeStateAPI</span><span>SuperGridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-document"><div class="dom-h">document</div><div class="dom-b"><span>DocumentServicesAPI</span><span>DocumentStructureAPI</span><span>DomainsAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>HistoryAPI</span><span>InteractionContextAPI</span></div></div>
+    <div class="dom dom-data"><div class="dom-h">data</div><div class="dom-b"><span>PagesDataServiceAPI</span><span>PagesDerivativeStateAPI</span><span>TraverseDataServiceAPI</span></div></div>
+    <div class="dom dom-sizing"><div class="dom-h">sizing-layout</div><div class="dom-b"><span>SystemContainerDerivativeStateAPI</span></div></div>
+    <div class="dom dom-monitoring"><div class="dom-h">monitoring</div><div class="dom-b"><span>UserActionAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>F5. StageShortcuts</h3><span class="m">21 REP &middot; 10 domains &middot; widest spread</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep"><div class="dep-source">StageShortcuts</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentInteractionAPI</span><span>ComponentLayoutDerivativeStateAPI</span><span>ComponentLayoutFlowsAPI</span><span>ComponentMeasureAPI</span><span>ComponentRotationDerivativeStateAPI</span><span>ComponentVisibilityDerivativeStateAPI</span><span>ComponentTypeAPI</span><span>SharedBlocksAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>EditorUIAPI</span><span>PreviewDisplayAPI</span><span>StageContextBuilderAPI</span></div></div>
+    <div class="dom dom-sections"><div class="dom-h">sections</div><div class="dom-b"><span>BlankSectionAPI</span></div></div>
+    <div class="dom dom-transforms"><div class="dom-h">transforms</div><div class="dom-b"><span>GroupingAPI</span><span>TransformationsFlowsAPI</span></div></div>
+    <div class="dom dom-sizing"><div class="dom-h">sizing-layout</div><div class="dom-b"><span>LayoutHeursticsDerivativeStateAPI</span></div></div>
+    <div class="dom dom-page-grid"><div class="dom-h">page-grid</div><div class="dom-b"><span>PageGridDerivativeStateAPI</span><span>PageGridUILogicAPI</span></div></div>
+    <div class="dom dom-data"><div class="dom-h">data</div><div class="dom-b"><span>PagesDataServiceAPI</span><span>TraverseDataServiceAPI</span></div></div>
+    <div class="dom dom-monitoring"><div class="dom-h">monitoring</div><div class="dom-b"><span>UserActionAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>38. StageIndicatorsBIAPI</h3><span class="m">16 REP &middot; 5 domains &middot; central BI hub</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
+<div class="dep"><div class="dep-source">StageIndicatorsBIAPI</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentDragFlowsBuilderAPI</span><span>ComponentEditorAPI</span><span>ComponentEditorBIAPI</span><span>ComponentInteractionAPI</span><span>ComponentMeasureAPI</span><span>ComponentResizeFlowsBuilderAPI</span><span>ComponentRotateFlowsBuilderAPI</span><span>ComponentTypeAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>StageContextBuilderAPI</span></div></div>
+    <div class="dom dom-grid"><div class="dom-h">grid</div><div class="dom-b"><span>GridDerivativeStateAPI</span></div></div>
+    <div class="dom dom-data"><div class="dom-h">data</div><div class="dom-b"><span>PagesAPI</span><span>PagesDataServiceAPI</span><span>TraverseDataServiceAPI</span></div></div>
+    <div class="dom dom-monitoring"><div class="dom-h">monitoring</div><div class="dom-b"><span>ResponsiveBIAPI</span><span>ResponsiveFedopsAPI</span><span>UserActionAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>F1. ElementLabelIndicator</h3><span class="m">6 REP &middot; 4 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep"><div class="dep-source">ElementLabelIndicator</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentTypeAPI</span><span>CustomComponentAppDefIdAPI</span></div></div>
+    <div class="dom dom-supergrid"><div class="dom-h">supergrid</div><div class="dom-b"><span>SuperGridCellDerivativeStateAPI</span></div></div>
+    <div class="dom dom-document"><div class="dom-h">document</div><div class="dom-b"><span>DocumentServicesAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>StageContextBuilderAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+<div class="dcard"><div class="dcard-h c" onclick="tog(this)"><div><h3>F4. LabelIconIndicatorGroup</h3><span class="m">6 REP &middot; 2 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b c">
+<div class="dep"><div class="dep-source">LabelIconIndicatorGroup</div><div class="dep-line"></div>
+  <div class="dep-domains">
+    <div class="dom dom-components"><div class="dom-h">components</div><div class="dom-b"><span>ComponentEditorAPI</span><span>ComponentEffectsDerivativeStateAPI</span><span>ComponentReactionsDerivativeStateAPI</span><span>PinnedToContainerDerivativeStateAPI</span></div></div>
+    <div class="dom dom-editor"><div class="dom-h">editor</div><div class="dom-b"><span>EditorPointerAPI</span><span>StageContextBuilderAPI</span></div></div>
+  </div>
+</div>
+</div></div>
+
+</div><!-- /features -->
+
+<!-- Indicators Summary -->
+<div id="indicators-summary" class="subtab-content">
+<h2>Top 5 Most Complex</h2>
+<table>
+  <tr><th>#</th><th>Indicator</th><th>REP</th><th>Total</th><th>Domains</th></tr>
+  <tr><td>F5</td><td><strong>StageShortcuts</strong></td><td>21</td><td>25</td><td>10</td></tr>
+  <tr><td>F2</td><td><strong>SectionNameIndicator</strong></td><td>18</td><td>24</td><td>8</td></tr>
+  <tr><td>3</td><td><strong>EditBoxIndicatorAPI</strong></td><td>17</td><td>22</td><td>8</td></tr>
+  <tr><td>15</td><td><strong>ResizablePaddingIndicatorAPI</strong></td><td>18</td><td>22</td><td>7</td></tr>
+  <tr><td>38</td><td><strong>StageIndicatorsBIAPI</strong></td><td>16</td><td>21</td><td>5</td></tr>
+</table>
+<h2>Most Used Dependencies</h2>
+<table>
+  <tr><th>API</th><th>Layer</th><th>Used By</th></tr>
+  <tr><td>ComponentMeasureAPI</td><td>DERIVATIVE_STATE</td><td>~20 indicators</td></tr>
+  <tr><td>ComponentEditorAPI</td><td>EDITOR_INFRA</td><td>~20 indicators</td></tr>
+  <tr><td>ComponentRotationDerivativeStateAPI</td><td>DERIVATIVE_STATE</td><td>~15 indicators</td></tr>
+  <tr><td>ComponentTypeAPI</td><td>EDITOR_INFRA</td><td>~12 indicators</td></tr>
+  <tr><td>TraverseDataServiceAPI</td><td>EDITOR_INFRA</td><td>~10 indicators</td></tr>
+  <tr><td>SuperGridDerivativeStateAPI</td><td>DERIVATIVE_STATE</td><td>~10 indicators</td></tr>
+  <tr><td>StageContextBuilderAPI</td><td>EDITOR_INFRA</td><td>~10 indicators</td></tr>
+</table>
+<h2>Layer Distribution</h2>
+<table>
+  <tr><th>Layer</th><th>Count</th><th>%</th></tr>
+  <tr><td>DERIVATIVE_STATE</td><td>18</td><td>26%</td></tr>
+  <tr><td>DATA_SERVICE</td><td>17</td><td>24%</td></tr>
+  <tr><td>FLOWS</td><td>11</td><td>16%</td></tr>
+  <tr><td>UI</td><td>10</td><td>14%</td></tr>
+  <tr><td>EDITOR_INFRA</td><td>8</td><td>11%</td></tr>
+  <tr><td>SITE</td><td>6</td><td>9%</td></tr>
+</table>
+<h2>All Indicators</h2>
+<table>
+  <tr><th>#</th><th>Indicator</th><th>REP</th><th>Addon</th><th>Shared</th><th>Domains</th></tr>
+  <tr><td>1</td><td>HoverBoxIndicatorAPI</td><td>12</td><td>1</td><td>3</td><td>8</td></tr>
+  <tr><td>2</td><td>DragBoxIndicatorAPI</td><td>1</td><td>0</td><td>1</td><td>1</td></tr>
+  <tr><td>3</td><td>EditBoxIndicatorAPI</td><td>17</td><td>3</td><td>2</td><td>8</td></tr>
+  <tr><td>4</td><td>MultiEditBoxIndicatorAPI</td><td>2</td><td>0</td><td>1</td><td>2</td></tr>
+  <tr><td>5</td><td>MultiDragBoxIndicatorAPI</td><td>2</td><td>0</td><td>1</td><td>2</td></tr>
+  <tr><td>6</td><td>FocusBoxIndicatorAPI</td><td>3</td><td>0</td><td>1</td><td>1</td></tr>
+  <tr><td>7</td><td>CustomBoxIndicatorAPI</td><td>2</td><td>0</td><td>1</td><td>1</td></tr>
+  <tr><td>8</td><td>MasterPieceHoverIndicatorAPI</td><td>9</td><td>1</td><td>1</td><td>4</td></tr>
+  <tr><td>9</td><td>RotationIndicatorAPI</td><td>2</td><td>2</td><td>2</td><td>2</td></tr>
+  <tr><td>10</td><td>ResizeIndicatorAPI</td><td>4</td><td>2</td><td>1</td><td>3</td></tr>
+  <tr><td>11</td><td>ChildrenBoxesIndicatorAPI</td><td>3</td><td>0</td><td>1</td><td>3</td></tr>
+  <tr><td>12</td><td>SpacingIndicatorAPI</td><td>1</td><td>1</td><td>1</td><td>2</td></tr>
+  <tr><td>14</td><td>EdgeDistanceIndicatorAPI</td><td>4</td><td>0</td><td>3</td><td>1</td></tr>
+  <tr><td>15</td><td>ResizablePaddingIndicatorAPI</td><td>18</td><td>2</td><td>2</td><td>7</td></tr>
+  <tr><td>16</td><td>ResizablePaddingBIAPI</td><td>4</td><td>0</td><td>4</td><td>3</td></tr>
+  <tr><td>18</td><td>ResizableGapIndicatorUIAPI</td><td>6</td><td>0</td><td>3</td><td>4</td></tr>
+  <tr><td>19</td><td>GridSectionResizeIndicatorAPI</td><td>15</td><td>1</td><td>4</td><td>8</td></tr>
+  <tr><td>22</td><td>SectionActionsIndicatorAPI</td><td>14</td><td>4</td><td>5</td><td>7</td></tr>
+  <tr><td>24</td><td>AddNewSectionButtonIndicator</td><td>14</td><td>1</td><td>3</td><td>7</td></tr>
+  <tr><td>25</td><td>AddNewSectionMenuIndicator</td><td>14</td><td>2</td><td>3</td><td>7</td></tr>
+  <tr><td>26</td><td>EmptyHeaderFooterIndicatorAPI</td><td>6</td><td>0</td><td>4</td><td>3</td></tr>
+  <tr><td>30</td><td>SnapAPI</td><td>13</td><td>1</td><td>1</td><td>5</td></tr>
+  <tr><td>31</td><td>GapHighlightIndicatorAPI</td><td>6</td><td>1</td><td>2</td><td>5</td></tr>
+  <tr><td>32</td><td>EqualSpaceIndicatorAPI</td><td>4</td><td>1</td><td>2</td><td>3</td></tr>
+  <tr><td>34</td><td>ResizeCellHighlightIndicatorAPI</td><td>6</td><td>2</td><td>1</td><td>5</td></tr>
+  <tr><td>35</td><td>PresenceHighlightBoxIndicatorAPI</td><td>6</td><td>0</td><td>1</td><td>3</td></tr>
+  <tr><td>38</td><td>StageIndicatorsBIAPI</td><td>16</td><td>0</td><td>5</td><td>5</td></tr>
+  <tr><td>F1</td><td>ElementLabelIndicator</td><td>6</td><td>1</td><td>5</td><td>4</td></tr>
+  <tr><td>F2</td><td>SectionNameIndicator</td><td>18</td><td>2</td><td>4</td><td>8</td></tr>
+  <tr><td>F4</td><td>LabelIconIndicatorGroup</td><td>6</td><td>0</td><td>2</td><td>2</td></tr>
+  <tr><td>F5</td><td>StageShortcuts</td><td>21</td><td>1</td><td>3</td><td>10</td></tr>
+  <tr><td>F6</td><td>SetAsBackgroundIndicator</td><td>3</td><td>0</td><td>3</td><td>2</td></tr>
+</table>
+</div>
+
+</div><!-- /indicators -->
+
+<script>
+function showTab(id,btn){
+  document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(e=>e.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+function showSub(tab,sub,btn){
+  var t=document.getElementById(tab);
+  t.querySelectorAll('.subtab-content').forEach(e=>e.classList.remove('active'));
+  t.querySelectorAll('.subtab-btn').forEach(e=>e.classList.remove('active'));
+  document.getElementById(tab+'-'+sub).classList.add('active');
+  btn.classList.add('active');
+}
+function tog(h){
+  h.classList.toggle('c');
+  h.nextElementSibling.classList.toggle('c');
+}
+</script>
+</body>
+</html>
