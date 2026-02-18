@@ -9447,6 +9447,7 @@ A full scan across all REP packages would significantly reduce the unmatched cou
 <div class="subtabs">
   <button class="subtab-btn active" onclick="showStrategySubtab('s-tpa',this)">TPA Integration</button>
   <button class="subtab-btn" onclick="showStrategySubtab('s-rules',this)">Core Rules</button>
+  <button class="subtab-btn" onclick="showStrategySubtab('s-questions',this)">Open Questions</button>
 </div>
 
 <!-- ===== TPA INTEGRATION ===== -->
@@ -9678,6 +9679,17 @@ SEO, A11Y, CMS implementations should not live in core, regardless of integratio
 VERTICAL layer packages (button editor, box editor, section editor) are consumers, not core. They implement the <code>ComponentEditorAPI</code> contract but don't define it.
 </div>
 
+<h2>Summary</h2>
+<div class="stats">
+  <div class="stat"><div class="v" style="color:var(--green)">SITE + INFRA</div><div class="l">Almost certainly core</div></div>
+  <div class="stat"><div class="v" style="color:var(--orange)">DATA+</div><div class="l">Case-by-case (owner decides)</div></div>
+  <div class="stat"><div class="v" style="color:var(--accent)">Client + Server</div><div class="l">Isomorphic core, client extensions</div></div>
+</div>
+
+</div><!-- /s-rules -->
+
+<!-- ===== OPEN QUESTIONS ===== -->
+<div id="s-questions" class="subtab-content">
 <h2>Open Questions</h2>
 
 <div class="finding" style="border-left:3px solid var(--text-muted)">
@@ -9702,14 +9714,7 @@ Not everything in core is generic infrastructure. Some features are so fundament
 These are <strong>core-features</strong> &mdash; domain-specific logic that multiple editors need for correct layout behavior. They span multiple layers (DATA_SERVICE, DERIVATIVE_STATE, possibly FLOWS) but form a cohesive unit.
 </div>
 
-<h2>Summary</h2>
-<div class="stats">
-  <div class="stat"><div class="v" style="color:var(--green)">SITE + INFRA</div><div class="l">Almost certainly core</div></div>
-  <div class="stat"><div class="v" style="color:var(--orange)">DATA+</div><div class="l">Case-by-case (owner decides)</div></div>
-  <div class="stat"><div class="v" style="color:var(--accent)">Client + Server</div><div class="l">Isomorphic core, client extensions</div></div>
-</div>
-
-</div><!-- /s-rules -->
+</div><!-- /s-questions -->
 
 </div><!-- /strategy -->
 
