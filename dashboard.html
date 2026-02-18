@@ -181,7 +181,7 @@ hr { border:none; border-top:1px solid var(--border); margin:20px 0; }
 <body>
 <header>
   <h1>Harmony &rarr; REP API Dependencies</h1>
-  <p>Layer Analysis, Whitelist, Method Usage, Pages, SuperGrid, and Indicators</p>
+  <p>Layer Analysis, Whitelist, Method Usage, Pages, SuperGrid, Indicators, and Strategy</p>
 </header>
 <nav class="tabs">
   <button class="tab-btn active" onclick="showTab('layers',this)">Layer Analysis</button>
@@ -190,6 +190,7 @@ hr { border:none; border-top:1px solid var(--border); margin:20px 0; }
   <button class="tab-btn" onclick="showTab('pages',this)">Pages</button>
   <button class="tab-btn" onclick="showTab('supergrid',this)">SuperGrid</button>
   <button class="tab-btn" onclick="showTab('indicators',this)">Indicators</button>
+  <button class="tab-btn" onclick="showTab('strategy',this)">Strategy</button>
 </nav>
 
 <!-- ========== LAYER ANALYSIS ========== -->
@@ -9431,6 +9432,257 @@ A full scan across all REP packages would significantly reduce the unmatched cou
 
 </div><!-- /indicators -->
 
+<!-- ========== STRATEGY ========== -->
+<div id="strategy" class="tab-content">
+
+<div class="subtabs">
+  <button class="subtab-btn active" onclick="showStrategySubtab('s-tpa',this)">TPA Integration</button>
+  <button class="subtab-btn" onclick="showStrategySubtab('s-rules',this)">Core Rules</button>
+</div>
+
+<!-- ===== TPA INTEGRATION ===== -->
+<div id="s-tpa" class="subtab-content active">
+<h2>TPA Integration: Studio Pattern vs Harmony Pattern</h2>
+<p>SEO, A11Y, and CMS are currently integrated differently in Studio (REP) vs Harmony. As part of migrating core from Studio to a dedicated repo, we need to decide which pattern TPAs should follow.</p>
+
+<h2>Current State: Studio (REP)</h2>
+<div class="finding">
+<strong>TPAs are first-class packages inside the monorepo</strong>
+<ul style="margin-top:6px">
+<li><code>editor-package-tpa</code> &mdash; 24+ entry points spanning DATA_SERVICE, SITE, FLOWS, UI layers</li>
+<li><code>editor-package-a11y-wizard-adapter</code> &mdash; 9+ entry points across 4 layers, consumes 20+ core APIs directly</li>
+<li>SEO logic embedded in <code>responsive-pages</code> package (<code>SeoAutoRedirectPrivateAPI</code> at FLOWS layer)</li>
+<li><code>editor-package-tpa-events</code> &mdash; hooks into publish, edit-mode, breakpoint changes</li>
+<li>All bundled at build time with the editor, loaded synchronously</li>
+</ul>
+</div>
+
+<h2>Current State: Harmony</h2>
+<div class="finding">
+<strong>TPAs live in separate repos, integrated via External APIs</strong>
+<ul style="margin-top:6px">
+<li>TPAs in own repos: <code>@wix/seo-repluggable</code>, <code>@wix/a11y-repluggable</code>, CMS packages</li>
+<li>Loaded dynamically via <code>odeditor-package-external-packages-loaders</code> during <code>site-load</code> sequence</li>
+<li><strong>Two-package pattern</strong>: <code>odeditor-package-pages-external</code> (public types) + <code>odeditor-package-pages</code> (internal implementation)</li>
+<li>TPAs contribute via <code>api.contribute*()</code> methods, not direct API access</li>
+<li>4 existing external packages: pages, site-profile, stage-indicators, add-panel</li>
+</ul>
+</div>
+
+<h2>Comparison</h2>
+<table>
+<tr>
+  <th style="width:15%">Aspect</th>
+  <th style="width:42%">Keep TPAs inside core repo (Studio)</th>
+  <th style="width:42%">External APIs (Harmony)</th>
+</tr>
+<tr>
+  <td><strong>Development</strong></td>
+  <td>Simpler &mdash; one repo, one build, atomic changes across TPA + core, direct API access with full type safety</td>
+  <td>TPA teams own their code in their own repos, independent release cadence, but harder to debug cross-repo</td>
+</tr>
+<tr>
+  <td><strong>Bundle size</strong></td>
+  <td style="color:var(--red)">All TPAs bundled = larger initial load, regardless of whether user needs them</td>
+  <td style="color:var(--green)">Async loading during <code>site-load</code> &mdash; smaller initial bundle, better TTI</td>
+</tr>
+<tr>
+  <td><strong>API surface</strong></td>
+  <td style="color:var(--red)">TPAs access entire core API surface &mdash; hard to distinguish public vs private, easy to create accidental dependencies</td>
+  <td style="color:var(--green)">Controlled surface via External API contracts &mdash; TPAs only access what's explicitly exposed</td>
+</tr>
+<tr>
+  <td><strong>Ownership</strong></td>
+  <td style="color:var(--red)">Core team responsible for TPA code on-call; TPA teams need core repo access</td>
+  <td style="color:var(--green)">TPA teams fully own their code; core team only maintains the External API contract</td>
+</tr>
+<tr>
+  <td><strong>Coordination</strong></td>
+  <td style="color:var(--green)">No cross-repo coordination needed; CI catches breaking changes immediately</td>
+  <td style="color:var(--red)">Version drift risk between external API and TPA implementation; need contract testing</td>
+</tr>
+<tr>
+  <td><strong>Flexibility</strong></td>
+  <td style="color:var(--green)">TPAs can use any core API method directly</td>
+  <td style="color:var(--red)">TPAs limited to what's designed into the External API; new TPA needs require External API changes</td>
+</tr>
+<tr>
+  <td><strong>Boilerplate</strong></td>
+  <td style="color:var(--green)">Standard entry point + API pattern</td>
+  <td style="color:var(--red)">Two-package pattern per integration point (types + implementation), contribution slots, bundle descriptor</td>
+</tr>
+</table>
+
+<h2>Key Consideration</h2>
+<div class="finding" style="border-left:3px solid var(--orange)">
+<strong style="color:var(--orange)">Surface area constraint</strong><br>
+The External API pattern fundamentally <strong>limits what TPAs can consume</strong>. In Studio, the A11Y adapter directly uses 20+ core APIs (<code>BreakpointsAPI</code>, <code>ColorPickerAPI</code>, <code>DialogsFlowsAPI</code>, <code>DocumentServicesAPI</code>, etc.). With External APIs, it would only access what's explicitly designed into the external contract. This is both the <strong>strength</strong> (controlled, stable surface) and the <strong>weakness</strong> (anything the TPA needs must be anticipated and pre-designed into the External API).
+</div>
+
+<h2>Harmony's External API Architecture</h2>
+<div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin:16px 0;font-size:12px">
+  <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 16px;text-align:center;min-width:120px">
+      <div style="font-weight:600;color:var(--orange)">@wix/seo-repluggable</div>
+      <div style="color:var(--text-muted);font-size:10px">Separate repo</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 16px;text-align:center;min-width:120px">
+      <div style="font-weight:600;color:var(--orange)">@wix/a11y-repluggable</div>
+      <div style="color:var(--text-muted);font-size:10px">Separate repo</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 16px;text-align:center;min-width:120px">
+      <div style="font-weight:600;color:var(--orange)">CMS packages</div>
+      <div style="color:var(--text-muted);font-size:10px">Separate repos</div>
+    </div>
+  </div>
+  <div style="width:2px;height:16px;background:var(--border)"></div>
+  <div style="font-size:10px;color:var(--text-muted)">dynamic import via SequenceLoaderAPI</div>
+  <div style="width:2px;height:16px;background:var(--border)"></div>
+  <div style="background:var(--accent-dim);border:2px solid var(--accent);border-radius:6px;padding:10px 20px;text-align:center">
+    <div style="font-weight:600;color:var(--accent)">external-packages-loaders</div>
+    <div style="color:var(--text-muted);font-size:10px">Loads bundle descriptors at site-load</div>
+  </div>
+  <div style="width:2px;height:16px;background:var(--border)"></div>
+  <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+    <div style="background:var(--surface);border:1px solid var(--green);border-radius:6px;padding:8px 14px;text-align:center">
+      <div style="font-weight:600;color:var(--green);font-size:11px">*-external packages</div>
+      <div style="color:var(--text-muted);font-size:10px">Public types + SlotKeys</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--purple);border-radius:6px;padding:8px 14px;text-align:center">
+      <div style="font-weight:600;color:var(--purple);font-size:11px">internal packages</div>
+      <div style="color:var(--text-muted);font-size:10px">Implementation + contributeAPI()</div>
+    </div>
+  </div>
+  <div style="width:2px;height:16px;background:var(--border)"></div>
+  <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+    <span class="badge badge-low">pages-external</span>
+    <span class="badge badge-low">site-profile-external</span>
+    <span class="badge badge-low">stage-indicators-external</span>
+    <span class="badge badge-low">add-panel-external</span>
+  </div>
+</div>
+
+</div><!-- /s-tpa -->
+
+<!-- ===== CORE RULES ===== -->
+<div id="s-rules" class="subtab-content">
+<h2>Rules for Creating Core</h2>
+<p>Draft criteria for what belongs in the new core package, derived from architectural analysis of both REP and Harmony.</p>
+
+<h2>Structural Rules</h2>
+
+<div class="finding" style="border-left:3px solid var(--accent)">
+<strong>1. Layer hierarchy is inviolable</strong><br>
+APIs declare a layer: SITE &rarr; EDITOR_INFRA &rarr; DATA_SERVICE &rarr; DERIVATIVE_STATE &rarr; FLOWS &rarr; UI &rarr; VERTICAL. Dependencies only flow downward. No exceptions.
+</div>
+
+<div class="finding" style="border-left:3px solid var(--accent)">
+<strong>2. Every public API is a SlotKey</strong><br>
+Interface defined separately from implementation. Published via <code>@wix/editorx-core-api</code> (or its successor). The SlotKey IS the contract &mdash; implementation can vary across editors.
+</div>
+
+<div class="finding" style="border-left:3px solid var(--accent)">
+<strong>3. Public means stable</strong><br>
+Marking <code>public: true</code> is a commitment to backward compatibility. External consumers (Harmony, Santa Editor, future editors) depend on it. Breaking changes require migration path.
+</div>
+
+<h2>What Belongs in Core</h2>
+
+<div class="finding" style="border-left:3px solid var(--green)">
+<strong>4. Core = shared infrastructure, not product features</strong><br>
+If only one vertical or TPA uses it, it's not core. Core APIs serve multiple consumers. A "core API" should have at least two independent consumers before extraction.
+</div>
+
+<div class="finding" style="border-left:3px solid var(--green)">
+<strong>5. Core should be Harmony-consumed (demand-driven)</strong><br>
+Our data shows 275 of 759 REP APIs (36.2%) are used by Harmony. The ~484 unused ones are:
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">
+  <span class="badge badge-medium">Santa-only</span>
+  <span class="badge badge-high">Deprecated / dead</span>
+  <span class="badge badge-none">Over-extracted</span>
+</div>
+For the new core, an API should have a clear consumer before extraction &mdash; no speculative APIs.
+</div>
+
+<div class="finding" style="border-left:3px solid var(--green)">
+<strong>6. Method granularity matters</strong><br>
+At <strong>42.3% overall method usage</strong>, current interfaces are roughly 2&times; larger than needed. New core interfaces should be tighter:
+<table style="width:auto;margin:8px 0">
+<tr><th>Layer</th><th>Methods</th><th>Used</th><th>Waste</th></tr>
+<tr><td><span class="lbadge-ui">UI</span></td><td>312</td><td>161 (51.6%)</td><td style="color:var(--orange)">48.4%</td></tr>
+<tr><td><span class="lbadge-data">DATA_SERVICE</span></td><td>1006</td><td>461 (45.8%)</td><td style="color:var(--orange)">54.2%</td></tr>
+<tr><td><span class="lbadge-deriv">DERIVATIVE_STATE</span></td><td>378</td><td>159 (42.1%)</td><td style="color:var(--red)">57.9%</td></tr>
+<tr><td><span class="lbadge-flows">FLOWS</span></td><td>795</td><td>324 (40.8%)</td><td style="color:var(--red)">59.2%</td></tr>
+<tr><td><span class="lbadge-site">SITE</span></td><td>373</td><td>126 (33.8%)</td><td style="color:var(--red)">66.2%</td></tr>
+<tr><td><span class="lbadge-infra">EDITOR_INFRA</span></td><td>310</td><td>112 (32.4%)</td><td style="color:var(--red)">67.6%</td></tr>
+</table>
+<strong>Recommendation:</strong> Split large interfaces by usage cohort. Only migrate methods that Harmony actually calls.
+</div>
+
+<h2>What Does NOT Belong in Core</h2>
+
+<div class="finding" style="border-left:3px solid var(--red)">
+<strong>7. TPA-specific logic stays outside</strong><br>
+SEO, A11Y, CMS implementations should not live in core, regardless of integration pattern. Core may provide <em>extension points</em> (External APIs, contribution slots), but not the TPA logic itself.
+</div>
+
+<div class="finding" style="border-left:3px solid var(--red)">
+<strong>8. Component-type-specific editors stay outside</strong><br>
+VERTICAL layer packages (button editor, box editor, section editor) are consumers, not core. They implement the <code>ComponentEditorAPI</code> contract but don't define it.
+</div>
+
+<div class="finding" style="border-left:3px solid var(--red)">
+<strong>9. UI implementations that aren't APIs stay outside</strong><br>
+Panel components, indicator renderers, dialog implementations &mdash; unless they expose a reusable API contract consumed by multiple packages.
+</div>
+
+<h2>Extraction Criteria</h2>
+
+<div class="finding" style="border-left:3px solid var(--purple)">
+<strong>10. Demand-driven extraction</strong><br>
+Don't extract an API into core "just in case." Extract when a second consumer needs it. The 63.8% of REP APIs unused by Harmony demonstrate the cost of speculative extraction.
+</div>
+
+<div class="finding" style="border-left:3px solid var(--purple)">
+<strong>11. Interface-first design</strong><br>
+Define the SlotKey interface before writing the implementation. The interface IS the contract. Review the interface as a standalone artifact &mdash; if it doesn't make sense without reading the implementation, it needs redesign.
+</div>
+
+<div class="finding" style="border-left:3px solid var(--purple)">
+<strong>12. No deprecated baggage</strong><br>
+Methods marked deprecated in REP should not migrate to the new core. Clean break. Examples from current analysis:
+<div class="meth-grid" style="margin:6px 0">
+  <span class="meth-unused">StageContextBuilderAPI.addPointerContextToRef</span>
+  <span class="meth-unused">StageContextBuilderAPI.getContributions</span>
+  <span class="meth-unused">EditorPointerAPI.getEditorPointerUniqueId</span>
+</div>
+</div>
+
+<h2>Decision Checklist</h2>
+<p>For each API being considered for the new core:</p>
+<table>
+<tr><th style="width:5%">#</th><th style="width:55%">Question</th><th style="width:20%">Yes &rarr;</th><th style="width:20%">No &rarr;</th></tr>
+<tr><td>1</td><td>Is it used by Harmony today?</td><td style="color:var(--green)">Continue</td><td style="color:var(--red)">Don't migrate</td></tr>
+<tr><td>2</td><td>Does it have 2+ independent consumers?</td><td style="color:var(--green)">Strong candidate</td><td style="color:var(--orange)">Migrate only if architecturally required</td></tr>
+<tr><td>3</td><td>Is the interface tight? (&gt;50% method usage)</td><td style="color:var(--green)">Migrate as-is</td><td style="color:var(--orange)">Trim unused methods first</td></tr>
+<tr><td>4</td><td>Does it contain deprecated methods?</td><td style="color:var(--red)">Remove deprecated, then migrate</td><td style="color:var(--green)">Clean</td></tr>
+<tr><td>5</td><td>Is it TPA/vertical-specific?</td><td style="color:var(--red)">Keep outside core</td><td style="color:var(--green)">Can be core</td></tr>
+<tr><td>6</td><td>Correct layer assignment?</td><td style="color:var(--green)">Proceed</td><td style="color:var(--orange)">Fix layer before migrating</td></tr>
+</table>
+
+<h2>Summary: Core by the Numbers</h2>
+<div class="stats">
+  <div class="stat"><div class="v">275</div><div class="l">APIs Used by Harmony</div></div>
+  <div class="stat"><div class="v">484</div><div class="l">APIs NOT Used</div></div>
+  <div class="stat"><div class="v" style="color:var(--orange)">42.3%</div><div class="l">Method Usage Rate</div></div>
+  <div class="stat"><div class="v" style="color:var(--red)">1,831</div><div class="l">Unused Methods</div></div>
+</div>
+<p style="text-align:center;color:var(--text-muted);font-size:11px">A lean core would contain ~275 APIs with ~1,343 methods (trimming the unused 1,831). That's <strong>36% of the current API count</strong> and <strong>42% of the current method count</strong>.</p>
+
+</div><!-- /s-rules -->
+
+</div><!-- /strategy -->
+
 <script>
 function showTab(id,btn){
   document.querySelectorAll('.tab-content').forEach(e=>e.classList.remove('active'));
@@ -9448,6 +9700,13 @@ function showSub(tab,sub,btn){
 function tog(h){
   h.classList.toggle('c');
   h.nextElementSibling.classList.toggle('c');
+}
+function showStrategySubtab(id,btn){
+  var p=document.getElementById('strategy');
+  p.querySelectorAll('.subtab-content').forEach(function(e){e.classList.remove('active')});
+  p.querySelectorAll('.subtab-btn').forEach(function(e){e.classList.remove('active')});
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
 }
 function showMethodSubtab(id,btn){
   var p=document.getElementById('methods');
