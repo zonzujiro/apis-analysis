@@ -9486,39 +9486,24 @@ A full scan across all REP packages would significantly reduce the unmatched cou
   <th style="width:42%">External APIs (Harmony)</th>
 </tr>
 <tr>
-  <td><strong>Development</strong></td>
-  <td>Simpler &mdash; one repo, one build, atomic changes across TPA + core, direct API access with full type safety</td>
-  <td>TPA teams own their code in their own repos, independent release cadence, but harder to debug cross-repo</td>
-</tr>
-<tr>
   <td><strong>Bundle size</strong></td>
-  <td style="color:var(--red)">All TPAs bundled = larger initial load, regardless of whether user needs them</td>
-  <td style="color:var(--green)">Async loading during <code>site-load</code> &mdash; smaller initial bundle, better TTI</td>
+  <td>All TPAs bundled = larger initial load, regardless of whether user needs them</td>
+  <td>Async loading during <code>site-load</code> &mdash; smaller initial bundle, better TTI</td>
 </tr>
 <tr>
   <td><strong>API surface</strong></td>
-  <td style="color:var(--red)">TPAs access entire core API surface &mdash; hard to distinguish public vs private, easy to create accidental dependencies</td>
-  <td style="color:var(--green)">Controlled surface via External API contracts &mdash; TPAs only access what's explicitly exposed</td>
+  <td>TPAs access entire core API surface &mdash; hard to distinguish public vs private, easy to create accidental dependencies</td>
+  <td>Controlled surface via External API contracts &mdash; TPAs only access what's explicitly exposed</td>
 </tr>
 <tr>
   <td><strong>Ownership</strong></td>
-  <td style="color:var(--red)">Core team responsible for TPA code on-call; TPA teams need core repo access</td>
-  <td style="color:var(--green)">TPA teams fully own their code; core team only maintains the External API contract</td>
-</tr>
-<tr>
-  <td><strong>Coordination</strong></td>
-  <td style="color:var(--green)">No cross-repo coordination needed; CI catches breaking changes immediately</td>
-  <td style="color:var(--red)">Version drift risk between external API and TPA implementation; need contract testing</td>
+  <td>Core team responsible for TPA code on-call; TPA teams need core repo access</td>
+  <td>TPA teams fully own their code; core team only maintains the External API contract</td>
 </tr>
 <tr>
   <td><strong>Flexibility</strong></td>
-  <td style="color:var(--green)">TPAs can use any core API method directly</td>
-  <td style="color:var(--red)">TPAs limited to what's designed into the External API; new TPA needs require External API changes</td>
-</tr>
-<tr>
-  <td><strong>Boilerplate</strong></td>
-  <td style="color:var(--green)">Standard entry point + API pattern</td>
-  <td style="color:var(--red)">Two-package pattern per integration point (types + implementation), contribution slots, bundle descriptor</td>
+  <td>TPAs can use any core API method directly</td>
+  <td>TPAs limited to what's designed into the External API; new TPA needs require External API changes</td>
 </tr>
 </table>
 
@@ -9576,36 +9561,18 @@ The External API pattern fundamentally <strong>limits what TPAs can consume</str
 <!-- ===== CORE RULES ===== -->
 <div id="s-rules" class="subtab-content">
 <h2>Rules for Creating Core</h2>
-<p>Draft criteria for what belongs in the new core package, derived from architectural analysis of both REP and Harmony.</p>
-
-<h2>Structural Rules</h2>
-
-<div class="finding" style="border-left:3px solid var(--accent)">
-<strong>1. Layer hierarchy is inviolable</strong><br>
-APIs declare a layer: SITE &rarr; EDITOR_INFRA &rarr; DATA_SERVICE &rarr; DERIVATIVE_STATE &rarr; FLOWS &rarr; UI &rarr; VERTICAL. Dependencies only flow downward. No exceptions.
-</div>
-
-<div class="finding" style="border-left:3px solid var(--accent)">
-<strong>2. Every public API is a SlotKey</strong><br>
-Interface defined separately from implementation. Published via <code>@wix/editorx-core-api</code> (or its successor). The SlotKey IS the contract &mdash; implementation can vary across editors.
-</div>
-
-<div class="finding" style="border-left:3px solid var(--accent)">
-<strong>3. Public means stable</strong><br>
-Marking <code>public: true</code> is a commitment to backward compatibility. External consumers (Harmony, Santa Editor, future editors) depend on it. Breaking changes require migration path.
-</div>
 
 <h2>Who Defines Core</h2>
 
 <div class="finding" style="border-left:3px solid var(--green)">
-<strong>4. Core is defined by API owners, not by consumption metrics</strong><br>
+<strong>1. Core is defined by API owners, not by consumption metrics</strong><br>
 The developers and owners of each API decide whether it belongs in core. Usage data (like this dashboard) informs the decision, but doesn't make it. An API owner understands the intent, roadmap, and architectural role of their API better than any automated analysis.
 </div>
 
 <h2>Layer-Based Core Boundaries</h2>
 
 <div class="finding" style="border-left:3px solid var(--green)">
-<strong>5. Layers below DATA_SERVICE are most likely core</strong><br>
+<strong>2. Layers below DATA_SERVICE are most likely core</strong><br>
 The foundational layers &mdash; <span class="lbadge-site">SITE</span> and <span class="lbadge-infra">EDITOR_INFRA</span> &mdash; form the natural core. These provide the base infrastructure that any editor built on this stack needs.
 <div style="margin:12px 0;display:flex;flex-direction:column;gap:4px">
   <div style="display:flex;align-items:center;gap:8px">
@@ -9622,7 +9589,7 @@ The foundational layers &mdash; <span class="lbadge-site">SITE</span> and <span 
 </div>
 
 <div class="finding" style="border-left:3px solid var(--orange)">
-<strong>6. DATA_SERVICE and above: case-by-case</strong><br>
+<strong>3. DATA_SERVICE and above: case-by-case</strong><br>
 Higher layers can contain core APIs, but it's not automatic. The decision depends on whether the API represents shared infrastructure or editor-specific product logic.
 <div style="margin:12px 0;display:flex;flex-direction:column;gap:4px">
   <div style="display:flex;align-items:center;gap:8px">
@@ -9643,39 +9610,25 @@ Higher layers can contain core APIs, but it's not automatic. The decision depend
   <div style="display:flex;align-items:center;gap:8px">
     <span class="lbadge-ui" style="width:140px;text-align:center">UI</span>
     <div style="flex:1;height:2px;background:var(--red)"></div>
-    <span style="color:var(--red);font-size:var(--fs-sm)">Rarely core</span>
+    <span style="color:var(--red);font-size:var(--fs-sm)">Never core</span>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
     <span class="lbadge-vert" style="width:140px;text-align:center">VERTICAL</span>
     <div style="flex:1;height:2px;background:var(--red)"></div>
-    <span style="color:var(--red);font-size:var(--fs-sm)">Rarely core</span>
+    <span style="color:var(--red);font-size:var(--fs-sm)">Never core</span>
   </div>
 </div>
-</div>
-
-<h2>Core-Features</h2>
-
-<div class="finding" style="border-left:3px solid var(--purple)">
-<strong>7. Core can have feature-specific parts</strong><br>
-Not everything in core is generic infrastructure. Some features are so fundamental to the layout engine that they belong in core even though they're feature-specific. Examples:
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">
-  <span class="badge badge-low">SuperGrid</span>
-  <span class="badge badge-low">spx* (spacing)</span>
-  <span class="badge badge-low">Layout heuristics</span>
-  <span class="badge badge-low">Grid derivatives</span>
-</div>
-These are <strong>core-features</strong> &mdash; domain-specific logic that multiple editors need for correct layout behavior. They span multiple layers (DATA_SERVICE, DERIVATIVE_STATE, possibly FLOWS) but form a cohesive unit.
 </div>
 
 <h2>Isomorphic Requirement &amp; Client/Server Split</h2>
 
 <div class="finding" style="border-left:3px solid var(--accent)">
-<strong>8. Core must be usable on the server &mdash; therefore isomorphic</strong><br>
+<strong>5. Core must be usable on the server &mdash; therefore isomorphic</strong><br>
 A key requirement for the new core: it must run on the server (e.g. for SSR, headless rendering, server-side layout calculation). This means core code <strong>cannot depend on browser APIs</strong> (DOM, window, measurements, etc.).
 </div>
 
 <div class="finding" style="border-left:3px solid var(--accent)">
-<strong>9. But some core APIs have client-only parts</strong><br>
+<strong>6. But some core APIs have client-only parts</strong><br>
 From a consumer's perspective, <code>LayoutHeuristicsAPI</code> is a core API. But its implementation has two sides:
 <div style="display:flex;gap:12px;margin:12px 0;flex-wrap:wrap">
   <div style="flex:1;min-width:200px;background:var(--bg);border:1px solid var(--green);border-radius:6px;padding:10px 14px">
@@ -9716,12 +9669,12 @@ From a consumer's perspective, <code>LayoutHeuristicsAPI</code> is a core API. B
 <h2>What Does NOT Belong in Core</h2>
 
 <div class="finding" style="border-left:3px solid var(--red)">
-<strong>10. TPA-specific logic stays outside</strong><br>
+<strong>7. TPA-specific logic stays outside</strong><br>
 SEO, A11Y, CMS implementations should not live in core, regardless of integration pattern. Core may provide <em>extension points</em> (External APIs, contribution slots), but not the TPA logic itself.
 </div>
 
 <div class="finding" style="border-left:3px solid var(--red)">
-<strong>11. Component-type-specific editors stay outside</strong><br>
+<strong>8. Component-type-specific editors stay outside</strong><br>
 VERTICAL layer packages (button editor, box editor, section editor) are consumers, not core. They implement the <code>ComponentEditorAPI</code> contract but don't define it.
 </div>
 
@@ -9742,11 +9695,17 @@ If SuperGrid is a core-feature, does that mean all SuperGrid APIs across all lay
 Should the split happen at the package level (separate npm packages for client vs server), at the entry point level (different entry points for different runtimes), or at the implementation level (same package, conditional imports)? Each approach has tradeoffs for bundle size, DX, and testing.
 </div>
 
+<div class="finding" style="border-left:3px solid var(--text-muted)">
+<strong>Core can have feature-specific parts</strong><br>
+Not everything in core is generic infrastructure. Some features are so fundamental to the layout engine that they belong in core even though they're feature-specific. Examples: SuperGrid, spx* (spacing), Layout heuristics, Grid derivatives.
+<br><br>
+These are <strong>core-features</strong> &mdash; domain-specific logic that multiple editors need for correct layout behavior. They span multiple layers (DATA_SERVICE, DERIVATIVE_STATE, possibly FLOWS) but form a cohesive unit.
+</div>
+
 <h2>Summary</h2>
 <div class="stats">
   <div class="stat"><div class="v" style="color:var(--green)">SITE + INFRA</div><div class="l">Almost certainly core</div></div>
   <div class="stat"><div class="v" style="color:var(--orange)">DATA+</div><div class="l">Case-by-case (owner decides)</div></div>
-  <div class="stat"><div class="v" style="color:var(--purple)">Core-features</div><div class="l">SuperGrid, spx*, layout</div></div>
   <div class="stat"><div class="v" style="color:var(--accent)">Client + Server</div><div class="l">Isomorphic core, client extensions</div></div>
 </div>
 
