@@ -9595,99 +9595,160 @@ Interface defined separately from implementation. Published via <code>@wix/edito
 Marking <code>public: true</code> is a commitment to backward compatibility. External consumers (Harmony, Santa Editor, future editors) depend on it. Breaking changes require migration path.
 </div>
 
-<h2>What Belongs in Core</h2>
+<h2>Who Defines Core</h2>
 
 <div class="finding" style="border-left:3px solid var(--green)">
-<strong>4. Core = shared infrastructure, not product features</strong><br>
-If only one vertical or TPA uses it, it's not core. Core APIs serve multiple consumers. A "core API" should have at least two independent consumers before extraction.
+<strong>4. Core is defined by API owners, not by consumption metrics</strong><br>
+The developers and owners of each API decide whether it belongs in core. Usage data (like this dashboard) informs the decision, but doesn't make it. An API owner understands the intent, roadmap, and architectural role of their API better than any automated analysis.
 </div>
 
+<h2>Layer-Based Core Boundaries</h2>
+
 <div class="finding" style="border-left:3px solid var(--green)">
-<strong>5. Core should be Harmony-consumed (demand-driven)</strong><br>
-Our data shows 275 of 759 REP APIs (36.2%) are used by Harmony. The ~484 unused ones are likely:
+<strong>5. Layers below DATA_SERVICE are most likely core</strong><br>
+The foundational layers &mdash; <span class="lbadge-site">SITE</span> and <span class="lbadge-infra">EDITOR_INFRA</span> &mdash; form the natural core. These provide the base infrastructure that any editor built on this stack needs.
+<div style="margin:12px 0;display:flex;flex-direction:column;gap:4px">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="lbadge-infra" style="width:140px;text-align:center">EDITOR_INFRA</span>
+    <div style="flex:1;height:2px;background:var(--green)"></div>
+    <span style="color:var(--green);font-size:var(--fs-sm)">Almost certainly core</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="lbadge-site" style="width:140px;text-align:center">SITE</span>
+    <div style="flex:1;height:2px;background:var(--green)"></div>
+    <span style="color:var(--green);font-size:var(--fs-sm)">Almost certainly core</span>
+  </div>
+</div>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--orange)">
+<strong>6. DATA_SERVICE and above: case-by-case</strong><br>
+Higher layers can contain core APIs, but it's not automatic. The decision depends on whether the API represents shared infrastructure or editor-specific product logic.
+<div style="margin:12px 0;display:flex;flex-direction:column;gap:4px">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="lbadge-data" style="width:140px;text-align:center">DATA_SERVICE</span>
+    <div style="flex:1;height:2px;background:var(--orange)"></div>
+    <span style="color:var(--orange);font-size:var(--fs-sm)">Sometimes core</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="lbadge-deriv" style="width:140px;text-align:center">DERIVATIVE_STATE</span>
+    <div style="flex:1;height:2px;background:var(--orange)"></div>
+    <span style="color:var(--orange);font-size:var(--fs-sm)">Sometimes core</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="lbadge-flows" style="width:140px;text-align:center">FLOWS</span>
+    <div style="flex:1;height:2px;background:var(--orange)"></div>
+    <span style="color:var(--orange);font-size:var(--fs-sm)">Sometimes core</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="lbadge-ui" style="width:140px;text-align:center">UI</span>
+    <div style="flex:1;height:2px;background:var(--red)"></div>
+    <span style="color:var(--red);font-size:var(--fs-sm)">Rarely core</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="lbadge-vert" style="width:140px;text-align:center">VERTICAL</span>
+    <div style="flex:1;height:2px;background:var(--red)"></div>
+    <span style="color:var(--red);font-size:var(--fs-sm)">Rarely core</span>
+  </div>
+</div>
+</div>
+
+<h2>Core-Features</h2>
+
+<div class="finding" style="border-left:3px solid var(--purple)">
+<strong>7. Core can have feature-specific parts</strong><br>
+Not everything in core is generic infrastructure. Some features are so fundamental to the layout engine that they belong in core even though they're feature-specific. Examples:
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">
-  <span class="badge badge-high">Deprecated / dead code</span>
-  <span class="badge badge-medium">Studio-internal only</span>
-  <span class="badge badge-none">Not yet needed by Harmony</span>
+  <span class="badge badge-low">SuperGrid</span>
+  <span class="badge badge-low">spx* (spacing)</span>
+  <span class="badge badge-low">Layout heuristics</span>
+  <span class="badge badge-low">Grid derivatives</span>
 </div>
-<em style="color:var(--text-muted)">Note: Studio APIs are not consumed by Santa Editor &mdash; these are separate technical stacks. The unused APIs serve only internal Studio package communication or are no longer needed.</em><br>
-For the new core, an API should have a clear consumer before extraction &mdash; no speculative APIs.
+These are <strong>core-features</strong> &mdash; domain-specific logic that multiple editors need for correct layout behavior. They span multiple layers (DATA_SERVICE, DERIVATIVE_STATE, possibly FLOWS) but form a cohesive unit.
 </div>
 
-<div class="finding" style="border-left:3px solid var(--green)">
-<strong>6. Method granularity matters</strong><br>
-At <strong>42.3% overall method usage</strong>, current interfaces are roughly 2&times; larger than needed. New core interfaces should be tighter:
-<table style="width:auto;margin:8px 0">
-<tr><th>Layer</th><th>Methods</th><th>Used</th><th>Waste</th></tr>
-<tr><td><span class="lbadge-ui">UI</span></td><td>312</td><td>161 (51.6%)</td><td style="color:var(--orange)">48.4%</td></tr>
-<tr><td><span class="lbadge-data">DATA_SERVICE</span></td><td>1006</td><td>461 (45.8%)</td><td style="color:var(--orange)">54.2%</td></tr>
-<tr><td><span class="lbadge-deriv">DERIVATIVE_STATE</span></td><td>378</td><td>159 (42.1%)</td><td style="color:var(--red)">57.9%</td></tr>
-<tr><td><span class="lbadge-flows">FLOWS</span></td><td>795</td><td>324 (40.8%)</td><td style="color:var(--red)">59.2%</td></tr>
-<tr><td><span class="lbadge-site">SITE</span></td><td>373</td><td>126 (33.8%)</td><td style="color:var(--red)">66.2%</td></tr>
-<tr><td><span class="lbadge-infra">EDITOR_INFRA</span></td><td>310</td><td>112 (32.4%)</td><td style="color:var(--red)">67.6%</td></tr>
-</table>
-<strong>Recommendation:</strong> Split large interfaces by usage cohort. Only migrate methods that Harmony actually calls.
+<h2>Isomorphic Requirement &amp; Client/Server Split</h2>
+
+<div class="finding" style="border-left:3px solid var(--accent)">
+<strong>8. Core must be usable on the server &mdash; therefore isomorphic</strong><br>
+A key requirement for the new core: it must run on the server (e.g. for SSR, headless rendering, server-side layout calculation). This means core code <strong>cannot depend on browser APIs</strong> (DOM, window, measurements, etc.).
+</div>
+
+<div class="finding" style="border-left:3px solid var(--accent)">
+<strong>9. But some core APIs have client-only parts</strong><br>
+From a consumer's perspective, <code>LayoutHeuristicsAPI</code> is a core API. But its implementation has two sides:
+<div style="display:flex;gap:12px;margin:12px 0;flex-wrap:wrap">
+  <div style="flex:1;min-width:200px;background:var(--bg);border:1px solid var(--green);border-radius:6px;padding:10px 14px">
+    <div style="font-weight:600;color:var(--green);font-size:var(--fs-sm);margin-bottom:4px">Server part (isomorphic)</div>
+    <div style="color:var(--text-muted);font-size:var(--fs-sm)">Pure calculations with layout data, bounding boxes, heuristic rules &mdash; no DOM needed</div>
+  </div>
+  <div style="flex:1;min-width:200px;background:var(--bg);border:1px solid var(--orange);border-radius:6px;padding:10px 14px">
+    <div style="font-weight:600;color:var(--orange);font-size:var(--fs-sm);margin-bottom:4px">Client part (browser-only)</div>
+    <div style="color:var(--text-muted);font-size:var(--fs-sm)">DOM measurements, viewport queries, real-time bounding box reads &mdash; requires browser</div>
+  </div>
+</div>
+<strong>Implication:</strong> The core repo should have both <strong>client</strong> and <strong>server</strong> parts. The same API interface can have different implementation paths depending on the runtime environment. The server part is the true "core"; the client part extends it with browser capabilities.
+</div>
+
+<div style="display:flex;flex-direction:column;align-items:center;gap:0;margin:20px 0;font-size:var(--fs-sm)">
+  <div style="background:var(--accent-dim);border:2px solid var(--accent);border-radius:6px;padding:10px 24px;text-align:center;font-weight:600;color:var(--accent)">
+    Core API Interface (SlotKey)
+    <div style="font-weight:400;font-size:var(--fs-2xs);color:var(--text-muted)">e.g. LayoutHeuristicsAPI, SuperGridDerivativeStateAPI</div>
+  </div>
+  <div style="display:flex;gap:40px;margin-top:8px">
+    <div style="display:flex;flex-direction:column;align-items:center">
+      <div style="width:2px;height:16px;background:var(--green)"></div>
+      <div style="background:var(--surface);border:1px solid var(--green);border-radius:6px;padding:8px 16px;text-align:center">
+        <div style="font-weight:600;color:var(--green)">Server impl</div>
+        <div style="font-size:var(--fs-2xs);color:var(--text-muted)">Isomorphic, pure logic</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center">
+      <div style="width:2px;height:16px;background:var(--orange)"></div>
+      <div style="background:var(--surface);border:1px solid var(--orange);border-radius:6px;padding:8px 16px;text-align:center">
+        <div style="font-weight:600;color:var(--orange)">Client impl</div>
+        <div style="font-size:var(--fs-2xs);color:var(--text-muted)">+ DOM measurements</div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <h2>What Does NOT Belong in Core</h2>
 
 <div class="finding" style="border-left:3px solid var(--red)">
-<strong>7. TPA-specific logic stays outside</strong><br>
+<strong>10. TPA-specific logic stays outside</strong><br>
 SEO, A11Y, CMS implementations should not live in core, regardless of integration pattern. Core may provide <em>extension points</em> (External APIs, contribution slots), but not the TPA logic itself.
 </div>
 
 <div class="finding" style="border-left:3px solid var(--red)">
-<strong>8. Component-type-specific editors stay outside</strong><br>
+<strong>11. Component-type-specific editors stay outside</strong><br>
 VERTICAL layer packages (button editor, box editor, section editor) are consumers, not core. They implement the <code>ComponentEditorAPI</code> contract but don't define it.
 </div>
 
-<div class="finding" style="border-left:3px solid var(--red)">
-<strong>9. UI implementations that aren't APIs stay outside</strong><br>
-Panel components, indicator renderers, dialog implementations &mdash; unless they expose a reusable API contract consumed by multiple packages.
+<h2>Open Questions</h2>
+
+<div class="finding" style="border-left:3px solid var(--text-muted)">
+<strong>Where exactly is the DATA_SERVICE boundary?</strong><br>
+Some DATA_SERVICE APIs are clearly core (e.g. <code>ComponentDataAPI</code>, <code>LayoutAPI</code>). Others may be editor-specific. API owners need to classify each one. Our analysis shows 63 DATA_SERVICE APIs used by Harmony out of 194 total &mdash; the unused 131 need owner review to determine if they're core, deprecated, or Studio-specific.
 </div>
 
-<h2>Extraction Criteria</h2>
-
-<div class="finding" style="border-left:3px solid var(--purple)">
-<strong>10. Demand-driven extraction</strong><br>
-Don't extract an API into core "just in case." Extract when a second consumer needs it. The 63.8% of REP APIs unused by Harmony demonstrate the cost of speculative extraction.
+<div class="finding" style="border-left:3px solid var(--text-muted)">
+<strong>How do core-features define their boundary?</strong><br>
+If SuperGrid is a core-feature, does that mean all SuperGrid APIs across all layers (DATA_SERVICE + DERIVATIVE_STATE + FLOWS) move together? Or only the isomorphic parts? The answer likely depends on the specific feature and its server-side requirements.
 </div>
 
-<div class="finding" style="border-left:3px solid var(--purple)">
-<strong>11. Interface-first design</strong><br>
-Define the SlotKey interface before writing the implementation. The interface IS the contract. Review the interface as a standalone artifact &mdash; if it doesn't make sense without reading the implementation, it needs redesign.
+<div class="finding" style="border-left:3px solid var(--text-muted)">
+<strong>Client/server split granularity</strong><br>
+Should the split happen at the package level (separate npm packages for client vs server), at the entry point level (different entry points for different runtimes), or at the implementation level (same package, conditional imports)? Each approach has tradeoffs for bundle size, DX, and testing.
 </div>
 
-<div class="finding" style="border-left:3px solid var(--purple)">
-<strong>12. No deprecated baggage</strong><br>
-Methods marked deprecated in REP should not migrate to the new core. Clean break. Examples from current analysis:
-<div class="meth-grid" style="margin:6px 0">
-  <span class="meth-unused">StageContextBuilderAPI.addPointerContextToRef</span>
-  <span class="meth-unused">StageContextBuilderAPI.getContributions</span>
-  <span class="meth-unused">EditorPointerAPI.getEditorPointerUniqueId</span>
-</div>
-</div>
-
-<h2>Decision Checklist</h2>
-<p>For each API being considered for the new core:</p>
-<table>
-<tr><th style="width:5%">#</th><th style="width:55%">Question</th><th style="width:20%">Yes &rarr;</th><th style="width:20%">No &rarr;</th></tr>
-<tr><td>1</td><td>Is it used by Harmony today?</td><td style="color:var(--green)">Continue</td><td style="color:var(--red)">Don't migrate</td></tr>
-<tr><td>2</td><td>Does it have 2+ independent consumers?</td><td style="color:var(--green)">Strong candidate</td><td style="color:var(--orange)">Migrate only if architecturally required</td></tr>
-<tr><td>3</td><td>Is the interface tight? (&gt;50% method usage)</td><td style="color:var(--green)">Migrate as-is</td><td style="color:var(--orange)">Trim unused methods first</td></tr>
-<tr><td>4</td><td>Does it contain deprecated methods?</td><td style="color:var(--red)">Remove deprecated, then migrate</td><td style="color:var(--green)">Clean</td></tr>
-<tr><td>5</td><td>Is it TPA/vertical-specific?</td><td style="color:var(--red)">Keep outside core</td><td style="color:var(--green)">Can be core</td></tr>
-<tr><td>6</td><td>Correct layer assignment?</td><td style="color:var(--green)">Proceed</td><td style="color:var(--orange)">Fix layer before migrating</td></tr>
-</table>
-
-<h2>Summary: Core by the Numbers</h2>
+<h2>Summary</h2>
 <div class="stats">
-  <div class="stat"><div class="v">275</div><div class="l">APIs Used by Harmony</div></div>
-  <div class="stat"><div class="v">484</div><div class="l">APIs NOT Used</div></div>
-  <div class="stat"><div class="v" style="color:var(--orange)">42.3%</div><div class="l">Method Usage Rate</div></div>
-  <div class="stat"><div class="v" style="color:var(--red)">1,831</div><div class="l">Unused Methods</div></div>
+  <div class="stat"><div class="v" style="color:var(--green)">SITE + INFRA</div><div class="l">Almost certainly core</div></div>
+  <div class="stat"><div class="v" style="color:var(--orange)">DATA+</div><div class="l">Case-by-case (owner decides)</div></div>
+  <div class="stat"><div class="v" style="color:var(--purple)">Core-features</div><div class="l">SuperGrid, spx*, layout</div></div>
+  <div class="stat"><div class="v" style="color:var(--accent)">Client + Server</div><div class="l">Isomorphic core, client extensions</div></div>
 </div>
-<p style="text-align:center;color:var(--text-muted);font-size:var(--fs-xs)">A lean core would contain ~275 APIs with ~1,343 methods (trimming the unused 1,831). That's <strong>36% of the current API count</strong> and <strong>42% of the current method count</strong>.</p>
 
 </div><!-- /s-rules -->
 
