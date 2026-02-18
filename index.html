@@ -9604,12 +9604,13 @@ If only one vertical or TPA uses it, it's not core. Core APIs serve multiple con
 
 <div class="finding" style="border-left:3px solid var(--green)">
 <strong>5. Core should be Harmony-consumed (demand-driven)</strong><br>
-Our data shows 275 of 759 REP APIs (36.2%) are used by Harmony. The ~484 unused ones are:
+Our data shows 275 of 759 REP APIs (36.2%) are used by Harmony. The ~484 unused ones are likely:
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin:8px 0">
-  <span class="badge badge-medium">Santa-only</span>
-  <span class="badge badge-high">Deprecated / dead</span>
-  <span class="badge badge-none">Over-extracted</span>
+  <span class="badge badge-high">Deprecated / dead code</span>
+  <span class="badge badge-medium">Studio-internal only</span>
+  <span class="badge badge-none">Not yet needed by Harmony</span>
 </div>
+<em style="color:var(--text-muted)">Note: Studio APIs are not consumed by Santa Editor &mdash; these are separate technical stacks. The unused APIs serve only internal Studio package communication or are no longer needed.</em><br>
 For the new core, an API should have a clear consumer before extraction &mdash; no speculative APIs.
 </div>
 
