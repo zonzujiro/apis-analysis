@@ -190,15 +190,13 @@ hr { border:none; border-top:1px solid var(--border); margin:20px 0; }
 <body>
 <header>
   <h1>Harmony &rarr; REP API Dependencies</h1>
-  <p>Layer Analysis, Whitelist, Method Usage, Pages, SuperGrid, Indicators, and Strategy</p>
+  <p>Layer Analysis, Whitelist, Method Usage, Domains, and Strategy</p>
 </header>
 <nav class="tabs">
   <button class="tab-btn active" onclick="showTab('layers',this)">Layer Analysis</button>
   <button class="tab-btn" onclick="showTab('whitelist',this)">Whitelist</button>
   <button class="tab-btn" onclick="showTab('methods',this)">Method Usage</button>
-  <button class="tab-btn" onclick="showTab('pages',this)">Pages</button>
-  <button class="tab-btn" onclick="showTab('supergrid',this)">SuperGrid</button>
-  <button class="tab-btn" onclick="showTab('indicators',this)">Indicators</button>
+  <button class="tab-btn" onclick="showTab('domains',this)">Domains</button>
   <button class="tab-btn" onclick="showTab('strategy',this)">Strategy</button>
 </nav>
 
@@ -8818,8 +8816,17 @@ A full scan across all REP packages would significantly reduce the unmatched cou
 
 </div><!-- /methods -->
 
-<!-- ========== PAGES ========== -->
-<div id="pages" class="tab-content">
+<!-- ========== DOMAINS ========== -->
+<div id="domains" class="tab-content">
+
+<div class="subtabs">
+  <button class="subtab-btn active" onclick="showDomainsSubtab('d-pages',this)">Pages</button>
+  <button class="subtab-btn" onclick="showDomainsSubtab('d-supergrid',this)">SuperGrid</button>
+  <button class="subtab-btn" onclick="showDomainsSubtab('d-indicators',this)">Indicators</button>
+</div>
+
+<div id="d-pages" class="subtab-content active">
+
 <div class="stats">
   <div class="stat"><div class="v">6</div><div class="l">Harmony APIs</div></div>
   <div class="stat"><div class="v">23</div><div class="l">REP Deps</div></div>
@@ -8902,10 +8909,10 @@ A full scan across all REP packages would significantly reduce the unmatched cou
   <tr><td>PanelsAPI</td><td>PagesActionsAPI, PagesPanelsAPI, PagesActionsBiAPI</td></tr>
 </table>
 </div>
-</div>
+</div><!-- /d-pages -->
 
-<!-- ========== SUPERGRID ========== -->
-<div id="supergrid" class="tab-content">
+<div id="d-supergrid" class="subtab-content">
+
 <div class="stats">
   <div class="stat"><div class="v">12</div><div class="l">Harmony APIs</div></div>
   <div class="stat"><div class="v">49</div><div class="l">REP Deps</div></div>
@@ -9117,10 +9124,11 @@ A full scan across all REP packages would significantly reduce the unmatched cou
 </table>
 </div>
 
-</div><!-- /supergrid -->
 
-<!-- ========== INDICATORS ========== -->
-<div id="indicators" class="tab-content">
+</div><!-- /d-supergrid -->
+
+<div id="d-indicators" class="subtab-content">
+
 <div class="stats">
   <div class="stat"><div class="v">51</div><div class="l">Indicator APIs</div></div>
   <div class="stat"><div class="v">70+</div><div class="l">REP Deps</div></div>
@@ -9439,7 +9447,10 @@ A full scan across all REP packages would significantly reduce the unmatched cou
 </table>
 </div>
 
-</div><!-- /indicators -->
+
+</div><!-- /d-indicators -->
+
+</div><!-- /domains -->
 
 <!-- ========== STRATEGY ========== -->
 <div id="strategy" class="tab-content">
@@ -9735,6 +9746,13 @@ function showSub(tab,sub,btn){
 function tog(h){
   h.classList.toggle('c');
   h.nextElementSibling.classList.toggle('c');
+}
+function showDomainsSubtab(id,btn){
+  var p=document.getElementById('domains');
+  p.querySelectorAll('.subtab-content').forEach(function(e){e.classList.remove('active')});
+  p.querySelectorAll('.subtab-btn').forEach(function(e){e.classList.remove('active')});
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
 }
 function showStrategySubtab(id,btn){
   var p=document.getElementById('strategy');
