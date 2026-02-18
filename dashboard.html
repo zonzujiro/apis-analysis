@@ -165,16 +165,28 @@ hr { border:none; border-top:1px solid var(--border); margin:20px 0; }
 .cat-pills { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
 .cat-pill { padding:4px 12px; border-radius:12px; font-size:11px; font-weight:500; border:1px solid var(--border); background:var(--surface); }
 .cat-pill strong { color:var(--accent); margin-right:4px; }
+
+/* Method usage bars */
+.mu-bar { display:flex; height:18px; border-radius:3px; overflow:hidden; }
+.mu-used { background:var(--green); }
+.mu-unused { background:#30363d; }
+
+/* Method list */
+.meth-used { color:var(--green); font-size:12px; }
+.meth-unused { color:var(--text-muted); font-size:12px; text-decoration:line-through; opacity:.7; }
+.meth-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:2px; margin:6px 0; }
+.meth-hot { font-size:10px; color:var(--orange); margin-left:4px; }
 </style>
 </head>
 <body>
 <header>
   <h1>Harmony &rarr; REP API Dependencies</h1>
-  <p>Layer Analysis, Whitelist Coverage, Pages, SuperGrid, and Indicators</p>
+  <p>Layer Analysis, Whitelist, Method Usage, Pages, SuperGrid, and Indicators</p>
 </header>
 <nav class="tabs">
   <button class="tab-btn active" onclick="showTab('layers',this)">Layer Analysis</button>
   <button class="tab-btn" onclick="showTab('whitelist',this)">Whitelist</button>
+  <button class="tab-btn" onclick="showTab('methods',this)">Method Usage</button>
   <button class="tab-btn" onclick="showTab('pages',this)">Pages</button>
   <button class="tab-btn" onclick="showTab('supergrid',this)">SuperGrid</button>
   <button class="tab-btn" onclick="showTab('indicators',this)">Indicators</button>
@@ -501,6 +513,552 @@ A full scan across all REP packages would significantly reduce the unmatched cou
 </div><!-- /whitelist-methodology -->
 
 </div><!-- /whitelist -->
+
+<!-- ========== METHOD USAGE ========== -->
+<div id="methods" class="tab-content">
+
+<div class="stats">
+  <div class="stat"><div class="v">12</div><div class="l">APIs Analyzed</div></div>
+  <div class="stat"><div class="v">274</div><div class="l">Total Methods</div></div>
+  <div class="stat"><div class="v" style="color:var(--orange)">103</div><div class="l">Used by Harmony</div></div>
+  <div class="stat"><div class="v" style="color:var(--red)">37.6%</div><div class="l">Method Usage Rate</div></div>
+</div>
+
+<h3 style="margin:18px 0 10px">Method Usage by API</h3>
+<p style="color:var(--text-muted);font-size:12px;margin-bottom:14px">
+  Sorted by usage percentage. Green = used methods, dark = unused methods.
+</p>
+
+<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:24px">
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:220px;font-size:12px;text-align:right;flex-shrink:0">TraverseDataServiceAPI</span>
+    <div class="mu-bar" style="flex:1"><div class="mu-used" style="width:100%"></div></div>
+    <span style="width:80px;font-size:11px;color:var(--green)">7/7 (100%)</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:220px;font-size:12px;text-align:right;flex-shrink:0">EditorPointerAPI</span>
+    <div class="mu-bar" style="flex:1"><div class="mu-used" style="width:75%"></div><div class="mu-unused" style="width:25%"></div></div>
+    <span style="width:80px;font-size:11px;color:var(--green)">6/8 (75%)</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:220px;font-size:12px;text-align:right;flex-shrink:0">ComponentMeasureAPI</span>
+    <div class="mu-bar" style="flex:1"><div class="mu-used" style="width:60%"></div><div class="mu-unused" style="width:40%"></div></div>
+    <span style="width:80px;font-size:11px;color:var(--green)">12/20 (60%)</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:220px;font-size:12px;text-align:right;flex-shrink:0">IndicationsAPI</span>
+    <div class="mu-bar" style="flex:1"><div class="mu-used" style="width:57%"></div><div class="mu-unused" style="width:43%"></div></div>
+    <span style="width:80px;font-size:11px;color:var(--orange)">4/7 (57%)</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:220px;font-size:12px;text-align:right;flex-shrink:0">PagesDataServiceAPI</span>
+    <div class="mu-bar" style="flex:1"><div class="mu-used" style="width:50%"></div><div class="mu-unused" style="width:50%"></div></div>
+    <span style="width:80px;font-size:11px;color:var(--orange)">28/56 (50%)</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:220px;font-size:12px;text-align:right;flex-shrink:0">ComponentTypeAPI</span>
+    <div class="mu-bar" style="flex:1"><div class="mu-used" style="width:50%"></div><div class="mu-unused" style="width:50%"></div></div>
+    <span style="width:80px;font-size:11px;color:var(--orange)">1/2 (50%)</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:220px;font-size:12px;text-align:right;flex-shrink:0">ComponentHierarchyAPI</span>
+    <div class="mu-bar" style="flex:1"><div class="mu-used" style="width:43%"></div><div class="mu-unused" style="width:57%"></div></div>
+    <span style="width:80px;font-size:11px;color:var(--orange)">6/14 (43%)</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:220px;font-size:12px;text-align:right;flex-shrink:0">SuperGridDerivativeStateAPI</span>
+    <div class="mu-bar" style="flex:1"><div class="mu-used" style="width:40%"></div><div class="mu-unused" style="width:60%"></div></div>
+    <span style="width:80px;font-size:11px;color:var(--orange)">4/10 (40%)</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:220px;font-size:12px;text-align:right;flex-shrink:0">StageContextBuilderAPI</span>
+    <div class="mu-bar" style="flex:1"><div class="mu-used" style="width:36%"></div><div class="mu-unused" style="width:64%"></div></div>
+    <span style="width:80px;font-size:11px;color:var(--orange)">4/11 (36%)</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:220px;font-size:12px;text-align:right;flex-shrink:0">GridDerivativeStateAPI</span>
+    <div class="mu-bar" style="flex:1"><div class="mu-used" style="width:32%"></div><div class="mu-unused" style="width:68%"></div></div>
+    <span style="width:80px;font-size:11px;color:var(--orange)">8/25 (32%)</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:220px;font-size:12px;text-align:right;flex-shrink:0">ComponentRoutingAPI</span>
+    <div class="mu-bar" style="flex:1"><div class="mu-used" style="width:26%"></div><div class="mu-unused" style="width:74%"></div></div>
+    <span style="width:80px;font-size:11px;color:var(--red)">9/34 (26%)</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:220px;font-size:12px;text-align:right;flex-shrink:0">ComponentEditorAPI</span>
+    <div class="mu-bar" style="flex:1"><div class="mu-used" style="width:18%"></div><div class="mu-unused" style="width:82%"></div></div>
+    <span style="width:80px;font-size:11px;color:var(--red)">14/80 (18%)</span>
+  </div>
+
+</div>
+
+<h3 style="margin:18px 0 10px">Key Findings</h3>
+<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
+  <div class="finding">
+    <strong>Harmony uses only 37.6% of available methods</strong> across 12 top APIs (103 of 274 methods). This confirms the "wide interface, narrow usage" pattern.
+  </div>
+  <div class="finding">
+    <strong>Small, focused APIs have high utilization.</strong> TraverseDataServiceAPI (100%), EditorPointerAPI (75%), and ComponentMeasureAPI (60%) are lean and well-used.
+  </div>
+  <div class="finding">
+    <strong>Large composite APIs have very low utilization.</strong> ComponentEditorAPI (80 methods, 18% used) and ComponentRoutingAPI (34 methods, 26% used) carry significant dead surface area.
+  </div>
+  <div class="finding">
+    <strong>ComponentEditorAPI is the biggest offender:</strong> it extends 7 interfaces and has 13 sub-objects, yet Harmony only calls 8 direct methods + 3 sub-objects. The most-called method (hasSectionBehaviors) appears in 38 call sites.
+  </div>
+  <div class="finding">
+    <strong>Deprecated/legacy namespaces drag down numbers.</strong> ComponentHierarchyAPI's entire OldBadPerformance mirror (7 methods) is unused; StageContextBuilderAPI has 2 deprecated methods.
+  </div>
+</div>
+
+<h3 style="margin:18px 0 10px">Per-API Method Details</h3>
+<p style="color:var(--text-muted);font-size:12px;margin-bottom:14px">
+  Click each API to expand used/unused method lists.
+</p>
+
+<!-- TraverseDataServiceAPI -->
+<details style="margin-bottom:6px">
+<summary style="cursor:pointer;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:13px">
+  <strong>TraverseDataServiceAPI</strong>
+  <span class="lbadge-infra" style="font-size:10px;padding:1px 6px;border-radius:3px;margin-left:6px">EDITOR_INFRA</span>
+  <span style="float:right;color:var(--green)">7/7 &mdash; 100%</span>
+</summary>
+<div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-top:0;border-radius:0 0 6px 6px">
+  <div style="margin-bottom:6px"><strong class="meth-used">Used (7):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-used">getChildren <span class="meth-hot">10 files</span></span>
+    <span class="meth-used">getParent <span class="meth-hot">10 files</span></span>
+    <span class="meth-used">getParentOrThrow <span class="meth-hot">3 files</span></span>
+    <span class="meth-used">getSiblings <span class="meth-hot">3 files</span></span>
+    <span class="meth-used">getAncestors <span class="meth-hot">3 files</span></span>
+    <span class="meth-used">isDescendantOfComp <span class="meth-hot">2 files</span></span>
+    <span class="meth-used">OldBadPerformance.* <span class="meth-hot">4 files</span></span>
+  </div>
+</div>
+</details>
+
+<!-- EditorPointerAPI -->
+<details style="margin-bottom:6px">
+<summary style="cursor:pointer;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:13px">
+  <strong>EditorPointerAPI</strong>
+  <span class="lbadge-site" style="font-size:10px;padding:1px 6px;border-radius:3px;margin-left:6px">SITE</span>
+  <span style="float:right;color:var(--green)">6/8 &mdash; 75%</span>
+</summary>
+<div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-top:0;border-radius:0 0 6px 6px">
+  <div style="margin-bottom:6px"><strong class="meth-used">Used (6):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-used">buildEditorPointer <span class="meth-hot">51 files</span></span>
+    <span class="meth-used">getDocumentPointer <span class="meth-hot">35 files</span></span>
+    <span class="meth-used">getDocumentPointerAndThrowIfInnerElement <span class="meth-hot">16 files</span></span>
+    <span class="meth-used">executeDocumentPointerAPI <span class="meth-hot">8 files</span></span>
+    <span class="meth-used">isInnerElement <span class="meth-hot">8 files</span></span>
+    <span class="meth-used">getInnerElementPath <span class="meth-hot">3 files</span></span>
+  </div>
+  <div style="margin:8px 0 6px"><strong class="meth-unused">Unused (2):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-unused">isSameEditorPointer</span>
+    <span class="meth-unused">getEditorPointerUniqueId</span>
+  </div>
+</div>
+</details>
+
+<!-- ComponentMeasureAPI -->
+<details style="margin-bottom:6px">
+<summary style="cursor:pointer;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:13px">
+  <strong>ComponentMeasureAPI</strong>
+  <span class="lbadge-deriv" style="font-size:10px;padding:1px 6px;border-radius:3px;margin-left:6px">DERIVATIVE_STATE</span>
+  <span style="float:right;color:var(--green)">12/20 &mdash; 60%</span>
+</summary>
+<div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-top:0;border-radius:0 0 6px 6px">
+  <div style="margin-bottom:6px"><strong class="meth-used">Used (12):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-used">measure <span class="meth-hot">49 sites</span></span>
+    <span class="meth-used">boundingBox.get <span class="meth-hot">38 sites</span></span>
+    <span class="meth-used">measureVisual <span class="meth-hot">17 sites</span></span>
+    <span class="meth-used">boundingBox.getVisual <span class="meth-hot">16 sites</span></span>
+    <span class="meth-used">measureToVisualMeasure <span class="meth-hot">7 sites</span></span>
+    <span class="meth-used">measureAbsoluteRect <span class="meth-hot">5 sites</span></span>
+    <span class="meth-used">measureOrThrow <span class="meth-hot">4 sites</span></span>
+    <span class="meth-used">absoluteBoundingVisual <span class="meth-hot">4 sites</span></span>
+    <span class="meth-used">measurePreviewComponent <span class="meth-hot">3 sites</span></span>
+    <span class="meth-used">absoluteBounding <span class="meth-hot">1 site</span></span>
+    <span class="meth-used">boundingBox.getRelativeToViewport <span class="meth-hot">1 site</span></span>
+    <span class="meth-used">boundingBox.getMultiple <span class="meth-hot">1 site</span></span>
+  </div>
+  <div style="margin:8px 0 6px"><strong class="meth-unused">Unused (8):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-unused">tryMeasure</span>
+    <span class="meth-unused">measureSnug</span>
+    <span class="meth-unused">measureVisualSnug</span>
+    <span class="meth-unused">measureSnugPure</span>
+    <span class="meth-unused">isUnknownMeasurement</span>
+    <span class="meth-unused">getStretchedMeasure</span>
+    <span class="meth-unused">scrollHeightVisual</span>
+    <span class="meth-unused">scrollWidthVisual</span>
+  </div>
+</div>
+</details>
+
+<!-- IndicationsAPI -->
+<details style="margin-bottom:6px">
+<summary style="cursor:pointer;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:13px">
+  <strong>IndicationsAPI</strong>
+  <span class="lbadge-ui" style="font-size:10px;padding:1px 6px;border-radius:3px;margin-left:6px">UI</span>
+  <span style="float:right;color:var(--orange)">4/7 &mdash; 57%</span>
+</summary>
+<div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-top:0;border-radius:0 0 6px 6px">
+  <div style="margin-bottom:6px"><strong class="meth-used">Used (4):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-used">getCustomContributedHoverItems <span class="meth-hot">2 files</span></span>
+    <span class="meth-used">getContributedIndicationsSettings <span class="meth-hot">2 files</span></span>
+    <span class="meth-used">contributeGlobalIndicator <span class="meth-hot">1 file</span></span>
+    <span class="meth-used">contributeGlobalIndicatorsFilter <span class="meth-hot">1 file</span></span>
+  </div>
+  <div style="margin:8px 0 6px"><strong class="meth-unused">Unused (3):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-unused">contributeCustomHoverItem</span>
+    <span class="meth-unused">contributeIndicationsSettings</span>
+    <span class="meth-unused">getGlobalIndicatorsFilters</span>
+  </div>
+</div>
+</details>
+
+<!-- PagesDataServiceAPI -->
+<details style="margin-bottom:6px">
+<summary style="cursor:pointer;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:13px">
+  <strong>PagesDataServiceAPI</strong>
+  <span class="lbadge-data" style="font-size:10px;padding:1px 6px;border-radius:3px;margin-left:6px">DATA_SERVICE</span>
+  <span style="float:right;color:var(--orange)">28/56 &mdash; 50%</span>
+</summary>
+<div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-top:0;border-radius:0 0 6px 6px">
+  <div style="margin-bottom:6px"><strong class="meth-used">Used (28):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-used">getFocusedPage <span class="meth-hot">19 files</span></span>
+    <span class="meth-used">getHomePage <span class="meth-hot">21 files</span></span>
+    <span class="meth-used">getPageData <span class="meth-hot">18 files</span></span>
+    <span class="meth-used">getCurrentPage <span class="meth-hot">15 files</span></span>
+    <span class="meth-used">getReference <span class="meth-hot">14 files</span></span>
+    <span class="meth-used">isPage <span class="meth-hot">8 files</span></span>
+    <span class="meth-used">getPagesData <span class="meth-hot">8 files</span></span>
+    <span class="meth-used">getMasterPage <span class="meth-hot">6 files</span></span>
+    <span class="meth-used">getPageTitle <span class="meth-hot">5 files</span></span>
+    <span class="meth-used">getPageOfComponent <span class="meth-hot">6 files</span></span>
+    <span class="meth-used">contributeAfterAddPageListener <span class="meth-hot">4 files</span></span>
+    <span class="meth-used">getPageDataByPointer <span class="meth-hot">4 files</span></span>
+    <span class="meth-used">getFocusedPageId <span class="meth-hot">3 files</span></span>
+    <span class="meth-used">getCurrentPageId <span class="meth-hot">3 files</span></span>
+    <span class="meth-used">isPopup <span class="meth-hot">3 files</span></span>
+    <span class="meth-used">doesPageExist <span class="meth-hot">2 files</span></span>
+    <span class="meth-used">contributeAfterNavigationListener <span class="meth-hot">2 files</span></span>
+    <span class="meth-used">contributeBeforeNavigationListener <span class="meth-hot">2 files</span></span>
+    <span class="meth-used">getPopupPagesDataList <span class="meth-hot">2 files</span></span>
+    <span class="meth-used">getPageUrl <span class="meth-hot">2 files</span></span>
+    <span class="meth-used">getPageAnchors <span class="meth-hot">2 files</span></span>
+    <span class="meth-used">isPopupByPointer <span class="meth-hot">2 files</span></span>
+    <span class="meth-used">contributeNavigationInterceptor</span>
+    <span class="meth-used">contributeAfterHomePageChange</span>
+    <span class="meth-used">isPopupOpened</span>
+    <span class="meth-used">isDuplicable</span>
+    <span class="meth-used">canNavigateToPage</span>
+    <span class="meth-used">getPageIdList</span>
+  </div>
+  <div style="margin:8px 0 6px"><strong class="meth-unused">Unused (28):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-unused">contributeNavigationRedirector</span>
+    <span class="meth-unused">contributePagesCommands</span>
+    <span class="meth-unused">contributeDuplicatePageCodeCondition</span>
+    <span class="meth-unused">contributeBeforeAddPageListener</span>
+    <span class="meth-unused">contributeOnPageRename</span>
+    <span class="meth-unused">contributeOnPageRemove</span>
+    <span class="meth-unused">contributePageTypeResolver</span>
+    <span class="meth-unused">contributePageVisibilityPredicate</span>
+    <span class="meth-unused">getPageCommands</span>
+    <span class="meth-unused">getMasterPageId</span>
+    <span class="meth-unused">getPageTitleByPointer</span>
+    <span class="meth-unused">getAppId</span>
+    <span class="meth-unused">getAppIdByPointer</span>
+    <span class="meth-unused">getAppInstanceId</span>
+    <span class="meth-unused">getAppInstanceIdByPointer</span>
+    <span class="meth-unused">doesPageExistByPointer</span>
+    <span class="meth-unused">isWidgetPage</span>
+    <span class="meth-unused">isWidgetPageByPointer</span>
+    <span class="meth-unused">canNavigateToPageByPointer</span>
+    <span class="meth-unused">getAdvancedSeoData</span>
+    <span class="meth-unused">getPageIdFromPointer</span>
+    <span class="meth-unused">getGlobalPagesCount</span>
+    <span class="meth-unused">getTransition</span>
+    <span class="meth-unused">isTpaPage</span>
+    <span class="meth-unused">isTpaPageByPointer</span>
+    <span class="meth-unused">isLoginRequired</span>
+    <span class="meth-unused">getPageLink</span>
+    <span class="meth-unused">getSiteStructure</span>
+  </div>
+</div>
+</details>
+
+<!-- ComponentTypeAPI -->
+<details style="margin-bottom:6px">
+<summary style="cursor:pointer;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:13px">
+  <strong>ComponentTypeAPI</strong>
+  <span class="lbadge-infra" style="font-size:10px;padding:1px 6px;border-radius:3px;margin-left:6px">EDITOR_INFRA</span>
+  <span style="float:right;color:var(--orange)">1/2 &mdash; 50%</span>
+</summary>
+<div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-top:0;border-radius:0 0 6px 6px">
+  <div style="margin-bottom:6px"><strong class="meth-used">Used (1):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-used">getType <span class="meth-hot">76 files</span></span>
+  </div>
+  <div style="margin:8px 0 6px"><strong class="meth-unused">Unused (1):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-unused">getTypeForStructure</span>
+  </div>
+</div>
+</details>
+
+<!-- ComponentHierarchyAPI -->
+<details style="margin-bottom:6px">
+<summary style="cursor:pointer;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:13px">
+  <strong>ComponentHierarchyAPI</strong>
+  <span class="lbadge-data" style="font-size:10px;padding:1px 6px;border-radius:3px;margin-left:6px">DATA_SERVICE</span>
+  <span style="float:right;color:var(--orange)">6/14 &mdash; 43%</span>
+</summary>
+<div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-top:0;border-radius:0 0 6px 6px">
+  <div style="margin-bottom:6px"><strong class="meth-used">Used (6):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-used">children.unstable_get <span class="meth-hot">31+ files</span></span>
+    <span class="meth-used">parent.unstable_get <span class="meth-hot">16 files</span></span>
+    <span class="meth-used">descendants.unstable_get <span class="meth-hot">5 files</span></span>
+    <span class="meth-used">ancestors.unstable_get <span class="meth-hot">3 files</span></span>
+    <span class="meth-used">siblings.unstable_get <span class="meth-hot">1 file</span></span>
+    <span class="meth-used">ancestors (namespace) <span class="meth-hot">1 file</span></span>
+  </div>
+  <div style="margin:8px 0 6px"><strong class="meth-unused">Unused (8):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-unused">children.unstable_getOnlyChild</span>
+    <span class="meth-unused">ancestors.unstable_isAncestorOfComponent</span>
+    <span class="meth-unused">parent.unstable_getOrThrow</span>
+    <span class="meth-unused">OldBadPerformance.children.*</span>
+    <span class="meth-unused">OldBadPerformance.siblings.*</span>
+    <span class="meth-unused">OldBadPerformance.ancestors.*</span>
+    <span class="meth-unused">OldBadPerformance.parent.*</span>
+  </div>
+  <p style="color:var(--text-muted);font-size:11px;margin-top:6px">
+    The entire OldBadPerformance mirror namespace (7 methods) is unused in Harmony.
+  </p>
+</div>
+</details>
+
+<!-- SuperGridDerivativeStateAPI -->
+<details style="margin-bottom:6px">
+<summary style="cursor:pointer;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:13px">
+  <strong>SuperGridDerivativeStateAPI</strong>
+  <span class="lbadge-deriv" style="font-size:10px;padding:1px 6px;border-radius:3px;margin-left:6px">DERIVATIVE_STATE</span>
+  <span style="float:right;color:var(--orange)">4/10 &mdash; 40%</span>
+</summary>
+<div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-top:0;border-radius:0 0 6px 6px">
+  <div style="margin-bottom:6px"><strong class="meth-used">Used (4):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-used">isSuperGrid <span class="meth-hot">17 files</span></span>
+    <span class="meth-used">getVisibleCells <span class="meth-hot">8 files</span></span>
+    <span class="meth-used">getCells <span class="meth-hot">2 files</span></span>
+    <span class="meth-used">canAddMoreCells <span class="meth-hot">1 file</span></span>
+  </div>
+  <div style="margin:8px 0 6px"><strong class="meth-unused">Unused (6):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-unused">canApplySuperGrid</span>
+    <span class="meth-unused">getNumberOfHiddenCellsComponentsOnAnyVariant</span>
+    <span class="meth-unused">getNumberOfVisibleCellComponents</span>
+    <span class="meth-unused">getNumberOfVisibleRows</span>
+    <span class="meth-unused">getNumberOfCellComponents</span>
+    <span class="meth-unused">getSuperGridLayout</span>
+  </div>
+</div>
+</details>
+
+<!-- StageContextBuilderAPI -->
+<details style="margin-bottom:6px">
+<summary style="cursor:pointer;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:13px">
+  <strong>StageContextBuilderAPI</strong>
+  <span class="lbadge-infra" style="font-size:10px;padding:1px 6px;border-radius:3px;margin-left:6px">EDITOR_INFRA</span>
+  <span style="float:right;color:var(--orange)">4/11 &mdash; 36%</span>
+</summary>
+<div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-top:0;border-radius:0 0 6px 6px">
+  <div style="margin-bottom:6px"><strong class="meth-used">Used (4):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-used">addCurrentContextToRef <span class="meth-hot">49 files, 102 sites</span></span>
+    <span class="meth-used">getGlobalPointer <span class="meth-hot">3 files</span></span>
+    <span class="meth-used">addContextToRef <span class="meth-hot">1 file</span></span>
+    <span class="meth-used">isCurrentContextTheGlobalContext <span class="meth-hot">1 file</span></span>
+  </div>
+  <div style="margin:8px 0 6px"><strong class="meth-unused">Unused (7):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-unused">contributeVariantType</span>
+    <span class="meth-unused">addCurrentContextWithOverrides</span>
+    <span class="meth-unused">addPointerContextToRef (deprecated)</span>
+    <span class="meth-unused">getAllPointersGroupedByType</span>
+    <span class="meth-unused">getAllPointers</span>
+    <span class="meth-unused">haveSameContext</span>
+    <span class="meth-unused">getContributions (deprecated)</span>
+  </div>
+</div>
+</details>
+
+<!-- GridDerivativeStateAPI -->
+<details style="margin-bottom:6px">
+<summary style="cursor:pointer;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:13px">
+  <strong>GridDerivativeStateAPI</strong>
+  <span class="lbadge-deriv" style="font-size:10px;padding:1px 6px;border-radius:3px;margin-left:6px">DERIVATIVE_STATE</span>
+  <span style="float:right;color:var(--orange)">8/25 &mdash; 32%</span>
+</summary>
+<div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-top:0;border-radius:0 0 6px 6px">
+  <div style="margin-bottom:6px"><strong class="meth-used">Used (8):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-used">getGridMeasurement <span class="meth-hot">10 files</span></span>
+    <span class="meth-used">getGridData <span class="meth-hot">9 files</span></span>
+    <span class="meth-used">getGridSize <span class="meth-hot">7 files</span></span>
+    <span class="meth-used">getEffectiveGridArea <span class="meth-hot">5 files</span></span>
+    <span class="meth-used">getColumns <span class="meth-hot">5 files</span></span>
+    <span class="meth-used">getRows <span class="meth-hot">4 files</span></span>
+    <span class="meth-used">isGrid <span class="meth-hot">3 files</span></span>
+    <span class="meth-used">getRowsInCurrentContext <span class="meth-hot">1 file</span></span>
+  </div>
+  <div style="margin:8px 0 6px"><strong class="meth-unused">Unused (17):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-unused">isSingleCellGrid</span>
+    <span class="meth-unused">getColumnsInCurrentContext</span>
+    <span class="meth-unused">canRemoveRows</span>
+    <span class="meth-unused">canRemoveColumns</span>
+    <span class="meth-unused">canApplyGrid</span>
+    <span class="meth-unused">getGridRawSize</span>
+    <span class="meth-unused">isGridResizable</span>
+    <span class="meth-unused">isFullTrackSpanInCurrentContext</span>
+    <span class="meth-unused">getComponentsInTrack</span>
+    <span class="meth-unused">getComponentsInCell</span>
+    <span class="meth-unused">isCssGrid</span>
+    <span class="meth-unused">getTrackSpan</span>
+    <span class="meth-unused">isNonDefinedGrid</span>
+    <span class="meth-unused">getGridRowsAndColumns</span>
+    <span class="meth-unused">getEffectiveGridContainerLayout</span>
+    <span class="meth-unused">getUpdatedGridMeasurment</span>
+    <span class="meth-unused">getTracksAfterReorder</span>
+  </div>
+</div>
+</details>
+
+<!-- ComponentRoutingAPI -->
+<details style="margin-bottom:6px">
+<summary style="cursor:pointer;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:13px">
+  <strong>ComponentRoutingAPI</strong>
+  <span class="lbadge-infra" style="font-size:10px;padding:1px 6px;border-radius:3px;margin-left:6px">EDITOR_INFRA</span>
+  <span style="float:right;color:var(--red)">9/34 &mdash; 26%</span>
+</summary>
+<div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-top:0;border-radius:0 0 6px 6px">
+  <div style="margin-bottom:6px"><strong class="meth-used">Used (9):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-used">getCompRefForSelection <span class="meth-hot">17 files</span></span>
+    <span class="meth-used">getDocumentReference <span class="meth-hot">14 files</span></span>
+    <span class="meth-used">getCompRefForArrangement <span class="meth-hot">12 files</span></span>
+    <span class="meth-used">getCompRefForAttachCandidate <span class="meth-hot">5 files</span></span>
+    <span class="meth-used">getCompRefForDataUpdate <span class="meth-hot">5 files</span></span>
+    <span class="meth-used">getCompRefForPositioning <span class="meth-hot">4 files</span></span>
+    <span class="meth-used">getCompRefForStyleUpdate <span class="meth-hot">3 files</span></span>
+    <span class="meth-used">getCompRefForReadWriteOperation <span class="meth-hot">2 files</span></span>
+    <span class="meth-used">getCompRefForInnerLayout <span class="meth-hot">1 file</span></span>
+  </div>
+  <div style="margin:8px 0 6px"><strong class="meth-unused">Unused (25):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-unused">getCompRefForOuterLayout</span>
+    <span class="meth-unused">getCompRefForStacking</span>
+    <span class="meth-unused">getCompRefForScroll</span>
+    <span class="meth-unused">getCompRefForAccessibility</span>
+    <span class="meth-unused">getCompRefForMenu</span>
+    <span class="meth-unused">getCompRefForUpdateNickname</span>
+    <span class="meth-unused">getCompRefForMeasure</span>
+    <span class="meth-unused">getCompRefForDeleteComponent</span>
+    <span class="meth-unused">getCompRefForBehaviorsExecution</span>
+    <span class="meth-unused">getCompRefForCurrentPageInstance</span>
+    <span class="meth-unused">getCompRefForLayoutRuntime</span>
+    <span class="meth-unused">getAllRenderedCompRefs</span>
+    <span class="meth-unused">getCompRefForComments</span>
+    <span class="meth-unused">getCompRefForRemove</span>
+    <span class="meth-unused">getCompRefForDuplicateComponent</span>
+    <span class="meth-unused">getCompRefForGFPP</span>
+    <span class="meth-unused">getCompRefForMove</span>
+    <span class="meth-unused">getCompRefForShowMore</span>
+    <span class="meth-unused">getCompRefForCssPerBreakpoint</span>
+    <span class="meth-unused">getContentDescendantRefs</span>
+    <span class="meth-unused">getCompRefForAdd</span>
+    <span class="meth-unused">getRenderedReference</span>
+    <span class="meth-unused">getContentAndChildrenOwner</span>
+    <span class="meth-unused">getPlacementOwner</span>
+    <span class="meth-unused">getCompRefsForCssOverrides</span>
+  </div>
+</div>
+</details>
+
+<!-- ComponentEditorAPI -->
+<details style="margin-bottom:6px">
+<summary style="cursor:pointer;padding:8px 12px;background:var(--surface);border:1px solid var(--border);border-radius:6px;font-size:13px">
+  <strong>ComponentEditorAPI</strong>
+  <span class="lbadge-infra" style="font-size:10px;padding:1px 6px;border-radius:3px;margin-left:6px">EDITOR_INFRA</span>
+  <span style="float:right;color:var(--red)">14/80 &mdash; 18%</span>
+</summary>
+<div style="padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-top:0;border-radius:0 0 6px 6px">
+  <p style="color:var(--text-muted);font-size:11px;margin-bottom:8px">
+    Composite API extending 7 interfaces + 13 named sub-object properties. 80 total members.
+  </p>
+  <div style="margin-bottom:6px"><strong class="meth-used">Used direct methods (8):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-used">hasSectionBehaviors <span class="meth-hot">38 sites</span></span>
+    <span class="meth-used">getContentBoundingBox <span class="meth-hot">4 sites</span></span>
+    <span class="meth-used">getBreakpointSource <span class="meth-hot">4 sites</span></span>
+    <span class="meth-used">getContextCommands <span class="meth-hot">2 sites</span></span>
+    <span class="meth-used">getAddComponentStrategy <span class="meth-hot">2 sites</span></span>
+    <span class="meth-used">unstable_getLayoutForPin <span class="meth-hot">1 site</span></span>
+    <span class="meth-used">getItemsReorderStrategy <span class="meth-hot">1 site</span></span>
+    <span class="meth-used">getIndicators <span class="meth-hot">1 site</span></span>
+  </div>
+  <div style="margin:8px 0 6px"><strong class="meth-used">Used sub-objects (3 of 13):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-used">metaData.* <span class="meth-hot">20+ sub-methods, many files</span></span>
+    <span class="meth-used">hooks.style.afterStyleUpdate <span class="meth-hot">5 files</span></span>
+    <span class="meth-used">authorization.isAuthorizedToChangeLayout <span class="meth-hot">1 file</span></span>
+  </div>
+  <div style="margin:8px 0 6px"><strong class="meth-unused">Unused direct methods (59):</strong></div>
+  <p style="color:var(--text-muted);font-size:11px;margin-bottom:4px">
+    From UiBehaviorsStageAPI (6), UiBehaviorsWorkspaceAPI (14), StageIndicatorsAPI (3),
+    StageDataAPI (13), CopyPasteComponentEditorAPI (2), DocumentBehaviorsAPI (7), DocumentManipulationsAPI (14)
+  </p>
+  <div style="margin:4px 0 6px"><strong class="meth-unused">Unused sub-objects (10 of 13):</strong></div>
+  <div class="meth-grid">
+    <span class="meth-unused">migration</span>
+    <span class="meth-unused">tools</span>
+    <span class="meth-unused">targetComp</span>
+    <span class="meth-unused">routing</span>
+    <span class="meth-unused">flowBranching</span>
+    <span class="meth-unused">layoutBehaviour</span>
+    <span class="meth-unused">layoutGeneration</span>
+    <span class="meth-unused">extensions</span>
+    <span class="meth-unused">abstractBehaviour</span>
+    <span class="meth-unused">sizingBehaviour</span>
+  </div>
+</div>
+</details>
+
+</div><!-- /methods -->
 
 <!-- ========== PAGES ========== -->
 <div id="pages" class="tab-content">
