@@ -8834,11 +8834,11 @@ A full scan across all REP packages would significantly reduce the unmatched cou
   <div class="stat"><div class="v">9</div><div class="l">Max Deps</div></div>
 </div>
 <div class="subtabs">
-  <button class="subtab-btn active" onclick="showSub('pages','diagrams',this)">Diagrams</button>
-  <button class="subtab-btn" onclick="showSub('pages','summary',this)">Summary</button>
+  <button class="subtab-btn active" onclick="showSub('d-pages','diagrams',this)">Diagrams</button>
+  <button class="subtab-btn" onclick="showSub('d-pages','summary',this)">Summary</button>
 </div>
 
-<div id="pages-diagrams" class="subtab-content active">
+<div id="d-pages-diagrams" class="subtab-content active">
 
 <!-- Pages: Current State -->
 <div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>Current State (Monolithic)</h3><span class="m">All 232 APIs in one package</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
@@ -8889,7 +8889,7 @@ A full scan across all REP packages would significantly reduce the unmatched cou
 </div></div>
 
 </div><!-- /pages-diagrams -->
-<div id="pages-summary" class="subtab-content">
+<div id="d-pages-summary" class="subtab-content">
 <h2>Dependency Summary</h2>
 <table>
   <tr><th>Harmony API</th><th>REP Deps</th><th>Packages</th><th>Complexity</th></tr>
@@ -8920,11 +8920,11 @@ A full scan across all REP packages would significantly reduce the unmatched cou
   <div class="stat"><div class="v">22</div><div class="l">Max Deps</div></div>
 </div>
 <div class="subtabs">
-  <button class="subtab-btn active" onclick="showSub('supergrid','diagrams',this)">Diagrams</button>
-  <button class="subtab-btn" onclick="showSub('supergrid','summary',this)">Summary</button>
+  <button class="subtab-btn active" onclick="showSub('d-supergrid','diagrams',this)">Diagrams</button>
+  <button class="subtab-btn" onclick="showSub('d-supergrid','summary',this)">Summary</button>
 </div>
 
-<div id="supergrid-diagrams" class="subtab-content active">
+<div id="d-supergrid-diagrams" class="subtab-content active">
 
 <!-- SG1: SuperGridLayoutAPI -->
 <div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>1. SuperGridLayoutAPI</h3><span class="m">22 deps &middot; 6 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
@@ -9105,7 +9105,7 @@ A full scan across all REP packages would significantly reduce the unmatched cou
 
 </div><!-- /supergrid-diagrams -->
 
-<div id="supergrid-summary" class="subtab-content">
+<div id="d-supergrid-summary" class="subtab-content">
 <h2>Dependency Summary</h2>
 <table>
   <tr><th>API</th><th>Package</th><th>Deps</th><th>Domains</th></tr>
@@ -9136,16 +9136,16 @@ A full scan across all REP packages would significantly reduce the unmatched cou
   <div class="stat"><div class="v">21</div><div class="l">Max Deps</div></div>
 </div>
 <div class="subtabs">
-  <button class="subtab-btn active" onclick="showSub('indicators','box',this)">Box</button>
-  <button class="subtab-btn" onclick="showSub('indicators','resize',this)">Resize</button>
-  <button class="subtab-btn" onclick="showSub('indicators','grid',this)">Grid</button>
-  <button class="subtab-btn" onclick="showSub('indicators','section',this)">Section/Snap</button>
-  <button class="subtab-btn" onclick="showSub('indicators','features',this)">Features/BI</button>
-  <button class="subtab-btn" onclick="showSub('indicators','summary',this)">Summary</button>
+  <button class="subtab-btn active" onclick="showSub('d-indicators','box',this)">Box</button>
+  <button class="subtab-btn" onclick="showSub('d-indicators','resize',this)">Resize</button>
+  <button class="subtab-btn" onclick="showSub('d-indicators','grid',this)">Grid</button>
+  <button class="subtab-btn" onclick="showSub('d-indicators','section',this)">Section/Snap</button>
+  <button class="subtab-btn" onclick="showSub('d-indicators','features',this)">Features/BI</button>
+  <button class="subtab-btn" onclick="showSub('d-indicators','summary',this)">Summary</button>
 </div>
 
 <!-- Box -->
-<div id="indicators-box" class="subtab-content active">
+<div id="d-indicators-box" class="subtab-content active">
 
 <div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>1. HoverBoxIndicatorAPI</h3><span class="m">12 REP &middot; 8 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
 <div class="dep"><div class="dep-source">HoverBoxIndicatorAPI</div><div class="dep-line"></div>
@@ -9195,7 +9195,7 @@ A full scan across all REP packages would significantly reduce the unmatched cou
 </div><!-- /box -->
 
 <!-- Resize -->
-<div id="indicators-resize" class="subtab-content">
+<div id="d-indicators-resize" class="subtab-content">
 
 <div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>10. ResizeIndicatorAPI</h3><span class="m">4 REP &middot; 3 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
 <div class="dep"><div class="dep-source">ResizeIndicatorAPI</div><div class="dep-line"></div>
@@ -9233,7 +9233,7 @@ A full scan across all REP packages would significantly reduce the unmatched cou
 </div><!-- /resize -->
 
 <!-- Grid -->
-<div id="indicators-grid" class="subtab-content">
+<div id="d-indicators-grid" class="subtab-content">
 
 <div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>19. GridSectionResizeIndicatorAPI</h3><span class="m">15 REP &middot; 8 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
 <div class="dep"><div class="dep-source">GridSectionResizeIndicatorAPI</div><div class="dep-line"></div>
@@ -9275,7 +9275,7 @@ A full scan across all REP packages would significantly reduce the unmatched cou
 </div><!-- /grid -->
 
 <!-- Section/Snap -->
-<div id="indicators-section" class="subtab-content">
+<div id="d-indicators-section" class="subtab-content">
 
 <div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>22. SectionActionsIndicatorAPI</h3><span class="m">14 REP &middot; 7 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
 <div class="dep"><div class="dep-source">SectionActionsIndicatorAPI</div><div class="dep-line"></div>
@@ -9312,7 +9312,7 @@ A full scan across all REP packages would significantly reduce the unmatched cou
 </div><!-- /section -->
 
 <!-- Features/BI -->
-<div id="indicators-features" class="subtab-content">
+<div id="d-indicators-features" class="subtab-content">
 
 <div class="dcard"><div class="dcard-h" onclick="tog(this)"><div><h3>F2. SectionNameIndicator</h3><span class="m">18 REP &middot; 8 domains</span></div><span class="arr">&#9662;</span></div><div class="dcard-b">
 <div class="dep"><div class="dep-source">SectionNameIndicator</div><div class="dep-line"></div>
@@ -9378,7 +9378,7 @@ A full scan across all REP packages would significantly reduce the unmatched cou
 </div><!-- /features -->
 
 <!-- Indicators Summary -->
-<div id="indicators-summary" class="subtab-content">
+<div id="d-indicators-summary" class="subtab-content">
 <h2>Top 5 Most Complex</h2>
 <table>
   <tr><th>#</th><th>Indicator</th><th>REP</th><th>Total</th><th>Domains</th></tr>
@@ -9749,8 +9749,8 @@ function tog(h){
 }
 function showDomainsSubtab(id,btn){
   var p=document.getElementById('domains');
-  p.querySelectorAll('.subtab-content').forEach(function(e){e.classList.remove('active')});
-  p.querySelectorAll('.subtab-btn').forEach(function(e){e.classList.remove('active')});
+  p.querySelectorAll(':scope > .subtab-content').forEach(function(e){e.classList.remove('active')});
+  p.querySelectorAll(':scope > .subtabs > .subtab-btn').forEach(function(e){e.classList.remove('active')});
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
 }
