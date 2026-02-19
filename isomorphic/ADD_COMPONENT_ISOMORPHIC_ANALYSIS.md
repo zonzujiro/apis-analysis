@@ -181,7 +181,7 @@ Entry point itself also declares `StageContextBuilderAPI`.
 | **Responsive Menu** | `ComponentSelectFlowsAPI` | ✗ RED |
 | **Image X** | `componentDataAPI`, `imageXFlowsAPI` | ✓ GREEN |
 | **Section Behaviours** | `pagesDataServiceAPI` (ORANGE) | ⚠️ ORANGE |
-| **TPA Widget / Glued / Section** | `tpaAPI.setCSSPerBreakpointEnabledForInstance()` | ⚠️ Unknown |
+| **TPA Widget / Glued / Section** | `tpaAPI.setCSSPerBreakpointEnabledForInstance()` | ✗ RED — `TpaDataServiceAPI` is on the forbidden Studio APIs list |
 | **Multilingual** | `isInTranslationMode()`, notification | ✓ GREEN |
 | **Mobile-Only Enhancer** *(Harmony)* | `StageContextBuilderAPI`, `OdeditorBreakpointsAPI` | ✗ RED |
 | **Default Component Editor** | `hideComponentInBiggerBreakpointsAfterAdd()` | ✓ GREEN |
