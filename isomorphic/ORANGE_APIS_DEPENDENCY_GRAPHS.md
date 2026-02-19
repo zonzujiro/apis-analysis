@@ -261,7 +261,7 @@ flowchart LR
 
     API --> LHD["LayoutHeursticsDerivativeStateAPI"]:::red
     API --> CTA["ComponentTypeAPI"]:::green
-    API --> HA["HistoryAPI"]:::red
+    API --> HA["HistoryAPI"]:::orange
     API --> CLD["ComponentLayoutAPI_deprecated"]:::red
     API --> PCD["PinnedToContainerDerivativeStateAPI"]:::red
     API --> SCB["StageContextBuilderAPI"]:::red
@@ -294,7 +294,9 @@ flowchart LR
     classDef green fill:#1a3a1a,stroke:#4c4,color:#eee
 ```
 
-**RED deps (9):** `LayoutHeursticsDerivativeStateAPI`, `HistoryAPI`, `ComponentLayoutAPI_deprecated`, `PinnedToContainerDerivativeStateAPI`, `StageContextBuilderAPI`, `ComponentMeasureAPI`, `PositionDerivativeStateAPI` *(reclassified RED)*, `ComponentsLocatorAPI`, `InteractionContextAPI`
+**RED deps (8):** `LayoutHeursticsDerivativeStateAPI`, `ComponentLayoutAPI_deprecated`, `PinnedToContainerDerivativeStateAPI`, `StageContextBuilderAPI`, `ComponentMeasureAPI`, `PositionDerivativeStateAPI` *(reclassified RED)*, `ComponentsLocatorAPI`, `InteractionContextAPI`
+
+**ORANGE deps (updated):** `HistoryAPI` — has server-compatible implementation (no-op history recording)
 
 ---
 

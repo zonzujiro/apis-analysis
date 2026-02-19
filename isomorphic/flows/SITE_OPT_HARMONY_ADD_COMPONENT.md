@@ -71,13 +71,30 @@ flowchart LR
 | API | Method | Verdict | Reason |
 |---|---|---|---|
 | `AiComponentsContributionAPI` | `.getAvailableComponentsStructure()` | ✓ GREEN | AI data registry |
-| `AddPanelDataAPI` | `.getData()` | ⚠️ ORANGE | Panel-layer data — "Panel" = editor UI signal; server path unverified |
+| `AddPanelDataAPI` | `.getData()` | ⚠️ ORANGE | `DERIVATIVE_STATE` layer (Harmony). `getData()` itself is clean — reads in-memory state, no browser APIs. Entry point declares `PanelsAPI` (client-only), preventing it from loading on server. State is populated from a client-side CMS fetch so `getData()` returns `null` on server. Returns `null` gracefully; code falls through to `OdeditorLayoutBuilderAPI` (RED) as final fallback. |
 | `TemplatesCmsDataServiceAPI` | `.resolveTemplateStructure()` | ✓ GREEN | CMS data layer |
 | `OdeditorLayoutBuilderAPI` | `.getCompLayout()` | ✗ RED | Depends on `StageContextBuilderAPI` (Stage/Preview) |
 
 ---
 
 ## Solution
+
+### 0. `getComponentStructure()` fallback chain
+
+The helper has a 3-step priority chain:
+
+```
+1. aiComponentsContributionAPI.getAvailableComponentsStructure()[type]  → GREEN (if present)
+2. addPanelDataAPI.getData() → fetchTemplatesByComponentType()
+   → templatesCmsDataServiceAPI.resolveTemplateStructure()               → GREEN (if template found)
+3. { componentType, layouts: odeditorLayoutBuilderAPI.getCompLayout() }  → RED
+```
+
+If the site-optimizer always uses component types registered in the AI contribution
+registry (step 1), neither `AddPanelDataAPI` nor `OdeditorLayoutBuilderAPI` is reached.
+The RED fallback only fires when the component type is unknown to all registries.
+
+---
 
 ### 1. Replace `EditorFlowAPI.run()` with `TransactionsAPI`
 

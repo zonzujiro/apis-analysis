@@ -148,7 +148,11 @@ Pattern to look for: `someSlot.getItems()`, `contributeXxx()`, `hooks.structure.
 Flow orchestration APIs (e.g. `EditorFlowAPI.run()`) may wrap isomorphic operations
 but also manage undo stacks and state that could depend on client context.
 
-`HistoryAPI` is not available on the server — always client-only.
+`HistoryAPI` has a server-compatible implementation — history recording is a no-op on the
+server but the API is injectable and calls like `batchHistory()` do not block server execution.
+Treat HistoryAPI as **ORANGE** (ambiguous), not RED. Verify the specific usage — e.g.
+`batchHistory()` wrapping a data mutation is fine; anything that depends on undo stack state
+being present needs case-by-case review.
 
 ### Page / Navigation Flows
 Page removal, navigation, and routing flows often involve UI (confirmation dialogs,
@@ -218,6 +222,97 @@ downstream conflicts.
 
 ---
 
+## Forbidden DocumentServices Operations
+
+If an API's implementation calls any of the following `documentServicesAPI` (or
+`extendedDocumentServicesAPI`) methods — directly or transitively — it is **RED**,
+regardless of its own dep chain. These operations are not available on the server.
+
+### Runtime / DOM measurements
+- `responsiveLayout.runtime.measure.getBoundingBox`
+- `responsiveLayout.runtime.measure.getGridMeasures`
+- `responsiveLayout.runtime.measure.getPadding`
+- `components.responsiveLayout.getRuntimeProperty`
+
+### Runtime component state (viewer instance)
+- `components.runtime.getProps`
+- `components.runtime.updateProps`
+- `components.runtime.removeProps`
+- `components.runtime.resolveManifestOverrides`
+- `platform.controllers.getStageData`
+
+### Scroll / animation
+- `site.animateScroll`
+- `site.setScroll`
+- `site.getScroll`
+- `components.scroll.isScrollable`
+- `site.isWithStaticSharedPartsInflation`
+- `components.isRenderedOnSite`
+
+### Editor UI state (focused/current page, view mode)
+- `pages.getFocusedPage`
+- `pages.getFocusedPageId`
+- `pages.getCurrentPage`
+- `pages.getCurrentPageId`
+- `pages.popupPages.isPopupOpened`
+- `viewMode.get`
+- `documentMode.getComponentViewMode`
+- `documentMode.setExtraSiteHeight`
+- `documentMode.getExtraSiteHeight`
+
+### History / save (require full editor context)
+- `history.add`
+- `history.canUndo`
+- `history.canRedo`
+- `history.getUndoLastSnapshotId`
+- `history.getUndoLastSnapshotParams`
+- `initAutosave`
+- `save`
+- `canAutosave`
+- `canUserPublish`
+
+### Page data not available on server
+- `pages.doesPageExist`
+- `pages.getPageIdList`
+- `pages.getRootNavigationInfo`
+- `site.getWidth`
+- `site.getHeight`
+
+### Site / publishing state not available on server
+- `siteDisplayName.get`
+- `generalInfo.getPublicUrl`
+- `generalInfo.isSitePublished`
+- `generalInfo.isDraft`
+- `generalInfo.getRevision`
+- `generalInfo.isFirstSave`
+- `premiumFeatures.get`
+- `platform.getAppDataByApplicationId`
+- `platform.getAppDataByAppDefId`
+- `platform.notifyAppsOnCustomEvent`
+- `builder.components.getCompAppData`
+
+### Deprecated traversal (never server-safe)
+- `deprecatedOldBadPerformanceApis.components.getContainer`
+- `deprecatedOldBadPerformanceApis.components.getAncestors`
+- `deprecatedOldBadPerformanceApis.components.getChildren`
+- `deprecatedOldBadPerformanceApis.components.get.byType`
+
+### Component metadata (render-aware or deprecated)
+- `components.is.resizeOnlyProportionally`
+- `components.is.resizable`
+- `components.is.rotatable`
+- `components.serialize`
+- `components.skin.get`
+- `components.scopes.extractScopeFromPointer`
+- `components.scopes.getRootComponent`
+- `components.scopes.getDefinedScopes`
+
+**Note:** `HistoryAPI` (the Repluggable API) has a server-compatible no-op implementation and
+is **not** blocked by this rule. Only the underlying `documentServicesAPI.history.*` calls
+listed above are forbidden.
+
+---
+
 ## Quick Checklist for Researching an API
 
 1. **Check the layer** — UI/VERTICAL = stop, always red.
@@ -226,8 +321,10 @@ downstream conflicts.
 3. **Check for `window` / `document` usage** — any direct use of browser globals = red.
 4. **Check `getDependencyAPIs()`** — does it depend on any known red API or root cause above?
    If yes, flag as red unless there is an explicit client/server split.
-5. **Check hook/slot contributions** — if the API exposes hooks, each contributor
+5. **Check DS operations** — does the implementation call any forbidden DocumentServices
+   operation from the list above? If yes, red regardless of API deps.
+6. **Check hook/slot contributions** — if the API exposes hooks, each contributor
    must be checked separately.
-6. **Check for BI** — BI APIs are not automatically red; they can run server-side.
-7. **Check for dialogs / confirmation flows** — any `confirm*`, `removeWith*`,
+7. **Check for BI** — BI APIs are not automatically red; they can run server-side.
+8. **Check for dialogs / confirmation flows** — any `confirm*`, `removeWith*`,
    `*Dialog*` method name is a strong signal of client-only.
