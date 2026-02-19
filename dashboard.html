@@ -9459,6 +9459,8 @@ A full scan across all REP packages would significantly reduce the unmatched cou
   <button class="subtab-btn active" onclick="showStrategySubtab('s-tpa',this)">TPA Integration</button>
   <button class="subtab-btn" onclick="showStrategySubtab('s-rules',this)">Core Rules</button>
   <button class="subtab-btn" onclick="showStrategySubtab('s-questions',this)">Open Questions</button>
+  <button class="subtab-btn" onclick="showStrategySubtab('s-iso',this)">Isomorphic Conflicts</button>
+  <button class="subtab-btn" onclick="showStrategySubtab('s-classify',this)">Classification Rules</button>
 </div>
 
 <!-- ===== TPA INTEGRATION ===== -->
@@ -9727,6 +9729,457 @@ These are <strong>core-features</strong> &mdash; domain-specific logic that mult
 </div>
 
 </div><!-- /s-questions -->
+
+<!-- ===== ISOMORPHIC CONFLICTS ===== -->
+<div id="s-iso" class="subtab-content">
+<h2>Isomorphic Conflict Analysis</h2>
+<p>Core-candidate APIs that directly depend on browser-only APIs (1-hop check).</p>
+
+<h2>Method</h2>
+<div class="finding">
+<ol style="margin-top:6px;padding-left:20px">
+<li>Seeded 205 "definitely not isomorphic" APIs &mdash; all UI/VERTICAL layer APIs plus explicitly browser-dependent ones (measurement, preview/iframe, scroll, DOM, browser events, indicators)</li>
+<li>Parsed <code>getDependencyAPIs()</code> from 2,028 entry points across REP</li>
+<li>Cross-referenced: found core-candidate APIs (SITE, EDITOR_INFRA, DATA_SERVICE, DERIVATIVE_STATE, FLOWS) that directly depend on any seed</li>
+</ol>
+</div>
+
+<h2>Summary</h2>
+<div class="stats">
+  <div class="stat"><div class="v">792</div><div class="l">SlotKey definitions</div></div>
+  <div class="stat"><div class="v">205</div><div class="l">Non-isomorphic seeds</div></div>
+  <div class="stat"><div class="v">2,028</div><div class="l">Entry points analyzed</div></div>
+  <div class="stat"><div class="v" style="color:var(--red)">205</div><div class="l">Core APIs with browser deps</div></div>
+</div>
+
+<table>
+<tr><th>Layer</th><th>Conflicts</th><th>Note</th></tr>
+<tr><td><span class="lbadge-site">SITE</span></td><td>6</td><td>Mostly preview-related</td></tr>
+<tr><td><span class="lbadge-infra">EDITOR_INFRA</span></td><td>6</td><td>All depend on PreviewAPI</td></tr>
+<tr><td><span class="lbadge-data">DATA_SERVICE</span></td><td>33</td><td>PreviewAPI, PreviewDisplayAPI, BrowserAPI, ScrollBarMeasureAPI</td></tr>
+<tr><td><span class="lbadge-deriv">DERIVATIVE_STATE</span></td><td>56</td><td>ComponentMeasureAPI and PreviewDisplayAPI dominate</td></tr>
+<tr><td><span class="lbadge-flows">FLOWS</span></td><td>104</td><td>Broad mix &mdash; measurement, preview, scroll, browser</td></tr>
+<tr style="font-weight:600"><td>Total</td><td>205</td><td></td></tr>
+</table>
+
+<h2>Top Browser-Dependency Categories</h2>
+<div style="display:flex;flex-direction:column;gap:6px;margin:12px 0">
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:140px;font-size:var(--fs-sm);color:var(--text-muted)">preview/iframe</span>
+    <div style="flex:none;width:clamp(100px,25vw,400px);height:clamp(16px,1.2vw,24px);background:var(--surface);border-radius:4px;overflow:hidden">
+      <div style="width:50.2%;height:100%;background:var(--red);border-radius:4px"></div>
+    </div>
+    <span style="font-size:var(--fs-sm);font-weight:600;color:var(--red)">161</span>
+    <span style="font-size:var(--fs-xs);color:var(--text-muted)">PreviewAPI, PreviewDisplayAPI, PreviewModeFlowsAPI</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:140px;font-size:var(--fs-sm);color:var(--text-muted)">measurement</span>
+    <div style="flex:none;width:clamp(100px,25vw,400px);height:clamp(16px,1.2vw,24px);background:var(--surface);border-radius:4px;overflow:hidden">
+      <div style="width:31.8%;height:100%;background:var(--orange);border-radius:4px"></div>
+    </div>
+    <span style="font-size:var(--fs-sm);font-weight:600;color:var(--orange)">102</span>
+    <span style="font-size:var(--fs-xs);color:var(--text-muted)">ComponentMeasureAPI, ComponentBoundingBoxAPI, ScrollBarMeasureAPI</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:140px;font-size:var(--fs-sm);color:var(--text-muted)">ui-layer</span>
+    <div style="flex:none;width:clamp(100px,25vw,400px);height:clamp(16px,1.2vw,24px);background:var(--surface);border-radius:4px;overflow:hidden">
+      <div style="width:5.3%;height:100%;background:var(--purple);border-radius:4px"></div>
+    </div>
+    <span style="font-size:var(--fs-sm);font-weight:600;color:var(--purple)">17</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:140px;font-size:var(--fs-sm);color:var(--text-muted)">scroll</span>
+    <div style="flex:none;width:clamp(100px,25vw,400px);height:clamp(16px,1.2vw,24px);background:var(--surface);border-radius:4px;overflow:hidden">
+      <div style="width:5.3%;height:100%;background:var(--accent);border-radius:4px"></div>
+    </div>
+    <span style="font-size:var(--fs-sm);font-weight:600;color:var(--accent)">17</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:140px;font-size:var(--fs-sm);color:var(--text-muted)">browser</span>
+    <div style="flex:none;width:clamp(100px,25vw,400px);height:clamp(16px,1.2vw,24px);background:var(--surface);border-radius:4px;overflow:hidden">
+      <div style="width:4.0%;height:100%;background:var(--green);border-radius:4px"></div>
+    </div>
+    <span style="font-size:var(--fs-sm);font-weight:600;color:var(--green)">13</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:140px;font-size:var(--fs-sm);color:var(--text-muted)">dom-order</span>
+    <div style="flex:none;width:clamp(100px,25vw,400px);height:clamp(16px,1.2vw,24px);background:var(--surface);border-radius:4px;overflow:hidden">
+      <div style="width:1.6%;height:100%;background:var(--text-muted);border-radius:4px"></div>
+    </div>
+    <span style="font-size:var(--fs-sm);font-weight:600">5</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:140px;font-size:var(--fs-sm);color:var(--text-muted)">user-input</span>
+    <div style="flex:none;width:clamp(100px,25vw,400px);height:clamp(16px,1.2vw,24px);background:var(--surface);border-radius:4px;overflow:hidden">
+      <div style="width:1.2%;height:100%;background:var(--text-muted);border-radius:4px"></div>
+    </div>
+    <span style="font-size:var(--fs-sm);font-weight:600">4</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="width:140px;font-size:var(--fs-sm);color:var(--text-muted)">animation</span>
+    <div style="flex:none;width:clamp(100px,25vw,400px);height:clamp(16px,1.2vw,24px);background:var(--surface);border-radius:4px;overflow:hidden">
+      <div style="width:0.6%;height:100%;background:var(--text-muted);border-radius:4px"></div>
+    </div>
+    <span style="font-size:var(--fs-sm);font-weight:600">2</span>
+  </div>
+</div>
+
+<h2>Key Insight: PreviewAPI Is the Biggest Blocker</h2>
+<div class="finding" style="border-left:3px solid var(--red)">
+PreviewAPI (SITE layer) and PreviewDisplayAPI (DATA_SERVICE) are the two most common browser dependencies. Together they account for <strong>161 out of 321</strong> total dependency references. These are iframe/DOM-based APIs that manage the site preview rendering.
+<br><br>
+<strong>This means most "isomorphic conflicts" aren't about the API's own logic being browser-dependent &mdash; they're about needing the preview iframe for context.</strong> On the server, this context would come from a different source (e.g. a virtual document model instead of an iframe).
+</div>
+
+<h2>Conclusions</h2>
+<div class="finding" style="border-left:3px solid var(--green)">
+<strong>1. PreviewAPI is the single biggest isomorphic blocker.</strong><br>
+Abstracting the preview iframe behind an isomorphic interface (virtual document on server, iframe on client) would resolve the majority of SITE and EDITOR_INFRA conflicts.
+</div>
+<div class="finding" style="border-left:3px solid var(--orange)">
+<strong>2. ComponentMeasureAPI is the second biggest blocker</strong>, especially in DERIVATIVE_STATE. Layout calculations need measurements, but measurements need the DOM. The client/server split discussed in Core Rules directly addresses this.
+</div>
+<div class="finding" style="border-left:3px solid var(--accent)">
+<strong>3. The conflict count (205) overstates the real problem.</strong><br>
+Most conflicts are caused by just 3&ndash;4 root APIs (PreviewAPI, PreviewDisplayAPI, ComponentMeasureAPI, ClientDimensionsAPI). Fix the abstraction at these roots and most downstream conflicts disappear.
+</div>
+<div class="finding" style="border-left:3px solid var(--text-muted)">
+<strong>4. Some conflicts are legitimate architecture issues</strong> (e.g. SaveAPI &rarr; BrowserAPI, BreakpointsDataServiceAPI &rarr; ClientDimensionsAPI). These need actual refactoring to separate browser-specific logic.
+</div>
+
+<h2>SITE Layer (6 conflicts)</h2>
+<table>
+<tr><th>API</th><th>Browser deps</th><th>Reason</th></tr>
+<tr><td><code>PreviewComponentAPI</code></td><td>PreviewAPI, ScrolledComponentsStoreAPI</td><td>preview, scroll</td></tr>
+<tr><td><code>PreviewAPI</code></td><td>PreviewEventsPluginAPI</td><td>preview</td></tr>
+<tr><td><code>PreviewPrivateAPI</code></td><td>ClientDimensionsAPI, ScrolledComponentsStoreAPI</td><td>browser, scroll</td></tr>
+<tr><td><code>DocumentServicesAPI</code></td><td>ClientDimensionsAPI, ScrolledComponentsStoreAPI</td><td>browser, scroll</td></tr>
+<tr><td><code>MiniSiteManagerAPI</code></td><td>ClientDimensionsAPI, ScrolledComponentsStoreAPI</td><td>browser, scroll</td></tr>
+<tr><td><code>TpaDataServiceAPI</code></td><td>PreviewAPI</td><td>preview</td></tr>
+</table>
+
+<h2>EDITOR_INFRA Layer (6 conflicts)</h2>
+<div class="finding" style="border-left:3px solid var(--accent)">
+All EDITOR_INFRA conflicts are caused by a single dependency: <strong>PreviewAPI</strong>.
+</div>
+<table>
+<tr><th>API</th><th>Browser deps</th><th>Reason</th></tr>
+<tr><td><code>ComponentEditorCachePrivateAPI</code></td><td>PreviewAPI</td><td>preview</td></tr>
+<tr><td><code>ComponentEditorBuilderAPI</code></td><td>PreviewAPI</td><td>preview</td></tr>
+<tr><td><code>ComponentEditorAPI</code></td><td>PreviewAPI</td><td>preview</td></tr>
+<tr><td><code>ComponentEditorBIAPI</code></td><td>PreviewAPI</td><td>preview</td></tr>
+<tr><td><code>ExternalStateSubscriberAPI</code></td><td>PreviewAPI</td><td>preview</td></tr>
+<tr><td><code>SingleComponentAbstractionPrivateAPI</code></td><td>PreviewAPI</td><td>preview</td></tr>
+</table>
+
+<h2>DATA_SERVICE Layer (33 conflicts)</h2>
+<p>Notable core APIs affected:</p>
+<table>
+<tr><th>API</th><th>Browser deps</th></tr>
+<tr><td><code>ComponentDataAPI</code></td><td>PreviewAPI</td></tr>
+<tr><td><code>ComponentLayoutAPI</code></td><td>PreviewDisplayAPI, PreviewAPI</td></tr>
+<tr><td><code>HistoryAPI</code></td><td>PreviewDisplayAPI</td></tr>
+<tr><td><code>PagesDataServiceAPI</code></td><td>PreviewAPI</td></tr>
+<tr><td><code>PagesAPI</code></td><td>PreviewAPI</td></tr>
+<tr><td><code>EditorFlowAPI</code></td><td>PreviewAPI</td></tr>
+<tr><td><code>BreakpointsDataServiceAPI</code></td><td>PreviewDisplayAPI, ClientDimensionsAPI, PreviewAPI</td></tr>
+<tr><td><code>SaveAPI</code></td><td>BrowserAPI</td></tr>
+<tr><td><code>SaveAndPublishAPI</code></td><td>BrowserAPI</td></tr>
+<tr><td><code>SpxAPI</code></td><td>ScrollBarMeasureAPI</td></tr>
+<tr><td><code>ThemePrivateAPI</code></td><td>ScrollBarMeasureAPI</td></tr>
+<tr><td><code>ScaleProportionallyAPI</code></td><td>PreviewAPI, ScrollBarMeasureAPI</td></tr>
+</table>
+
+<h2>DERIVATIVE_STATE Layer (56 conflicts)</h2>
+<p>Notable core APIs affected:</p>
+<table>
+<tr><th>API</th><th>Browser deps</th></tr>
+<tr><td><code>ComponentMeasureAPI</code></td><td>PreviewDisplayAPI</td></tr>
+<tr><td><code>ComponentMeasureDerivativeStateAPI</code></td><td>ComponentMeasureAPI, ScrolledComponents*, PreviewDisplayAPI</td></tr>
+<tr><td><code>ComponentLayoutDerivativeStateAPI</code></td><td>PreviewDisplayAPI, PreviewAPI, ComponentMeasureAPI</td></tr>
+<tr><td><code>ComponentBoundingBoxAPI</code></td><td>ComponentMeasureAPI</td></tr>
+<tr><td><code>ComponentsDerivativeStateAPI</code></td><td>ScrolledComponents*, PreviewDisplayAPI, PreviewAPI, ComponentMeasureAPI</td></tr>
+<tr><td><code>BreakpointsDerivativeStateAPI</code></td><td>PreviewDisplayAPI, ScrolledComponents*, ComponentMeasureAPI, ClientDimensionsAPI</td></tr>
+<tr><td><code>GridDerivativeStateAPI</code></td><td>PreviewAPI</td></tr>
+<tr><td><code>GridSliceAPI</code></td><td>PreviewDisplayAPI, ComponentMeasureAPI</td></tr>
+<tr><td><code>GridLayoutDerivativeStatePrivateAPI</code></td><td>ComponentMeasureAPI, PreviewAPI</td></tr>
+<tr><td><code>GridChildLayoutHeuristicsAPI</code></td><td>ComponentMeasureAPI</td></tr>
+<tr><td><code>SuperGridDerivativeStateAPI</code></td><td>ComponentMeasureAPI</td></tr>
+<tr><td><code>UnitsConversionsAPI</code></td><td>PreviewDisplayAPI, ComponentMeasureAPI</td></tr>
+<tr><td><code>SnapAPI</code></td><td>PreviewDisplayAPI, ComponentMeasureAPI</td></tr>
+</table>
+
+<h2>FLOWS Layer (104 conflicts)</h2>
+<div class="finding">
+Too many to list individually. The dominant patterns:
+<ul style="margin-top:6px">
+<li>Almost every FLOWS API depends on PreviewAPI or PreviewDisplayAPI</li>
+<li>Many layout/grid flows depend on ComponentMeasureAPI</li>
+<li>Some depend on BrowserAPI (save, publish, navigation flows)</li>
+</ul>
+</div>
+
+</div><!-- /s-iso -->
+
+<!-- ===== CLASSIFICATION RULES ===== -->
+<div id="s-classify" class="subtab-content">
+<h2>Isomorphic Classification Rules</h2>
+<p>Reference for determining whether an API can run on the server (isomorphic) or is client-only. Used during research and migration planning.</p>
+
+<h2>Always Client-Only</h2>
+<p style="color:var(--text-muted)">These categories are always client-only, regardless of layer or usage.</p>
+
+<div class="finding" style="border-left:3px solid var(--red)">
+<strong>DOM Measurements</strong><br>
+APIs that read or compute layout/size/position from the browser DOM.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>ComponentMeasureAPI</code>, <code>MockComponentMeasureAPI</code>, <code>ComponentMeasureDerivativeStateAPI</code>,
+<code>ComponentBoundingBoxAPI</code>, <code>ScrollBarMeasureAPI</code>, <code>ClientDimensionsAPI</code>
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--red)">
+<strong>Editor UI</strong><br>
+APIs that render or manage visible editor chrome — panels, dialogs, selection handles, hover state, tooltips, etc.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>PanelsAPI</code>, <code>ComponentInteractionAPI</code>, <code>ComponentSelectFlowsAPI</code>,
+<code>LightboxRemoveConfirmationAPI</code>
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--red)">
+<strong>Editor State</strong><br>
+APIs that track the editor's runtime UI state — what is selected, what is open, what mode the editor is in from the user's perspective.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>ComponentEditorStateAPI</code>
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--red)">
+<strong>Stage / Preview Logic</strong><br>
+APIs tied to the site preview iframe or stage rendering context.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>StageContextBuilderAPI</code>, <code>PreviewAPI</code>, <code>PreviewDisplayAPI</code>, <code>PreviewZoomAPI</code>,
+<code>PreviewMouseActionContributionAPI</code>, <code>PreviewEventsPluginAPI</code>, <code>PreviewModeFlowsAPI</code>,
+<code>PreviewContextMenuAPI</code>, <code>ComponentPreviewAPI</code>
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--red)">
+<strong>Scroll</strong><br>
+APIs that track or manipulate DOM scroll position.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>ScrolledComponentsDerivativeStateAPI</code>, <code>ScrolledComponentsFlowsAPI</code>,
+<code>ScrolledComponentsStoreAPI</code>
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--red)">
+<strong>User Input (Mouse / Keyboard / Drag)</strong><br>
+APIs that handle browser input events — clicks, drags, keypresses.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>SelectionModelAPI</code>, <code>SelectionModelConfigurationAPI</code>,
+<code>ContinuousKeyboardActionAPI</code>, <code>ContinuesActionAcceptorWrapperAPI</code>,
+<code>ComponentDragFlowsAPI</code>, <code>DragMouseActionAcceptorAPI</code>
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--red)">
+<strong>DOM Order</strong><br>
+APIs that depend on or manipulate the actual DOM node ordering.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>DOMOrderFlowsAPI</code>, <code>DOMSortingAPI</code>, <code>AutoDOMOrderFlowsAPI</code>
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--red)">
+<strong>Animations</strong><br>
+APIs that drive CSS or DOM animations.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>StageAnimationsFlowsAPI</code>, <code>ResizeTransitionAPI</code>
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--red)">
+<strong>Stage Indicators</strong><br>
+All visual indicator APIs — they render overlays in the browser DOM.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>ViewportBoxIndicatorAPI</code>, <code>FocusBoxIndicatorAPI</code>, <code>ResizeIndicatorAPI</code>,
+<code>EditBoxIndicatorAPI</code>, <code>DragBoxIndicatorAPI</code>, <code>HaloIndicatorAPI</code>,
+<code>HighlightBoxIndicatorAPI</code>, <code>HoverBoxIndicatorAPI</code>, <code>SelectionBoxIndicatorAPI</code>,
+<code>RotationIndicatorAPI</code>, <code>SpacingIndicatorAPI</code>, <code>SnapIndicatorAPI</code>,
+<code>IndicatorRegistryAPI</code>, and all other <code>*IndicatorAPI</code>
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--red)">
+<strong>Browser / Viewport Globals</strong><br>
+APIs wrapping <code>window</code>, <code>document</code>, or viewport state. Also any entry point that directly references <code>window.*</code> or <code>document.*</code>.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>BrowserAPI</code>, <code>BlockingLayerAPI</code> — and any entrypoint using these globals directly
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--red)">
+<strong>Render Triggers</strong><br>
+Any API whose primary purpose is to trigger a browser repaint or re-render.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>TransactionsAPI.render()</code>
+</span>
+</div>
+
+<h2>Not Client-Only</h2>
+
+<div class="finding" style="border-left:3px solid var(--green)">
+<strong>BI / Analytics APIs</strong><br>
+BI events can be sent from the server. Do not assume BI APIs are client-only.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>ComponentEditorBIAPI</code>, and BI-related APIs in general.
+</span>
+</div>
+
+<h2>Settled Experiments</h2>
+<p style="color:var(--text-muted)">Some experiments are permanently open or closed. Skip branches gated behind these — they are effectively dead or guaranteed code.</p>
+
+<div class="finding" style="border-left:3px solid var(--accent)">
+<strong><code>specs.responsive-editor.addFlowNoStructureManipulation</code> — always TRUE</strong><br>
+100% open since 2024. Treat the <code>true</code> branch as the only live path.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<strong>Implication:</strong> <code>componentAddFlowsAPI.prepareStructureToAdd</code> is dead code in this path —
+it uses measurements and other browser operations that are never reached. This experiment can be merged to permanently remove that method.
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--accent)">
+<strong><code>specs.responsive-editor.validateIsContainableBeforeAdd</code> — always FALSE</strong><br>
+100% false. Treat the <code>false</code> branch as the only live path.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<strong>Implication:</strong> <code>isContainable</code> is never called in the add flow — it depends on
+<code>traverseDataServiceAPI.OldBadPerformance.getParent</code>, which can be ignored when
+analyzing the add component flow. Merging removes the <code>isContainable</code> call entirely.
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--accent)">
+<strong>Experimental flow — always ON</strong><br>
+When code branches on <code>experimentalFlowsAPI.isInExperimentalFlow()</code>, treat the experimental
+(<code>true</code>) branch as the only live path. The legacy path is dead.
+</div>
+
+<div class="finding" style="border-left:3px solid var(--accent)">
+<strong>Add component flow — parameter assumptions</strong><br>
+<code>compMeasure</code>, <code>containerRef</code>, and <code>containerMeasure</code> should always be defined.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<strong>Implication:</strong> Fallback branches that measure these values (because they are undefined)
+are dead paths. Skip them when analyzing for isomorphic compatibility.
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--accent)">
+<strong><code>shouldConfirmAdd</code> — always FALSE (except site creation)</strong><br>
+The add confirmation dialog is skipped in almost all cases. The dialog path is effectively dead for normal flows.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<strong>Exception:</strong> The site creation flow uses this flag to avoid notifications —
+that case needs to be extracted to a contribution rather than hardcoded.
+</span>
+</div>
+
+<h2>Ambiguous — Needs Case-by-Case Analysis</h2>
+
+<div class="finding" style="border-left:3px solid var(--orange)">
+<strong>Hook / Slot Systems</strong><br>
+Hooks and contribution slots are only as isomorphic as their contributors. A slot itself may be neutral, but if any contributed implementation touches a client-only API, the slot becomes client-only for that package.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+Pattern to look for: <code>someSlot.getItems()</code>, <code>contributeXxx()</code>, <code>hooks.structure.*</code>
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--orange)">
+<strong>History / Transaction Orchestration</strong><br>
+Flow orchestration APIs may wrap isomorphic operations but also manage undo stacks and state that could depend on client context.
+<code>HistoryAPI</code> is not available on the server — always client-only.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>EditorFlowAPI.run()</code>, <code>HistoryAPI</code>
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--orange)">
+<strong>Page / Navigation Flows</strong><br>
+Page removal, navigation, and routing flows often involve UI (confirmation dialogs, URL changes) but may have isomorphic subsets.
+</div>
+
+<h2>Always Isomorphic</h2>
+
+<div class="finding" style="border-left:3px solid var(--green)">
+<strong>Document Model Access</strong><br>
+APIs that read or write the document data structure without touching the DOM.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>DocumentServicesAPI.components.*</code>, <code>ComponentDataAPI</code>, <code>LayoutAPI</code>,
+<code>DocumentStructureAPI</code>, <code>ComponentHierarchyAPI</code>
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--green)">
+<strong>Pointer / Ref Utilities</strong><br>
+Pure pointer resolution and comparison — no side effects, no DOM.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>ComponentRoutingAPI</code>, <code>PointerComparisonAPI</code>, <code>EditorPointerAPI</code>
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--green)">
+<strong>Draft / Mode Flags</strong><br>
+Simple state flags — no DOM, no UI.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>ComponentDraftDataModeAPI.ifOnDraftMode()</code>
+</span>
+</div>
+
+<div class="finding" style="border-left:3px solid var(--green)">
+<strong>Experiment / Feature Flags</strong><br>
+Boolean flag reads — always isomorphic.<br>
+<span style="color:var(--text-muted);font-size:var(--fs-sm)">
+<code>ExperimentsAPI</code>, <code>ExperimentalFlowsAPI</code>
+</span>
+</div>
+
+<h2>Layer-Based Heuristics</h2>
+<p style="color:var(--text-muted)">Starting points only — owner decision always takes precedence.</p>
+<table>
+<tr><th>Layer</th><th>Heuristic</th></tr>
+<tr><td><span class="lbadge-site">SITE</span></td><td>Usually isomorphic — foundational document model</td></tr>
+<tr><td><span class="lbadge-infra">EDITOR_INFRA</span></td><td>Usually isomorphic — but watch for preview/iframe deps</td></tr>
+<tr><td><span class="lbadge-data">DATA_SERVICE</span></td><td>Often isomorphic — verify measurement and preview deps</td></tr>
+<tr><td><span class="lbadge-deriv">DERIVATIVE_STATE</span></td><td>Mixed — measurement-heavy APIs are client-only</td></tr>
+<tr><td><span class="lbadge-flows">FLOWS</span></td><td>Mixed — orchestration may include UI steps</td></tr>
+<tr><td><span class="lbadge-ui">UI</span></td><td style="color:var(--red)">Always client-only</td></tr>
+<tr><td><span class="lbadge-vert">VERTICAL</span></td><td style="color:var(--red)">Always client-only</td></tr>
+</table>
+
+<h2>Known Root Causes</h2>
+<p style="color:var(--text-muted)">If the API you are researching depends on any of these, it is likely client-only. Most of the 205 conflicts in our analysis cascade from these roots.</p>
+<table>
+<tr><th>API</th><th>Category</th><th>Conflict refs</th></tr>
+<tr><td><code>PreviewAPI</code></td><td>Stage/Preview</td><td style="color:var(--red);font-weight:600">161 — largest blocker</td></tr>
+<tr><td><code>PreviewDisplayAPI</code></td><td>Stage/Preview</td><td style="color:var(--red)">part of 161 preview refs</td></tr>
+<tr><td><code>ComponentMeasureAPI</code></td><td>DOM Measurements</td><td style="color:var(--orange);font-weight:600">102</td></tr>
+<tr><td><code>ClientDimensionsAPI</code></td><td>Browser/Viewport</td><td style="color:var(--orange)">part of browser refs</td></tr>
+<tr><td><code>BrowserAPI</code></td><td>Browser/Viewport</td><td>13</td></tr>
+<tr><td><code>ScrolledComponentsStoreAPI</code></td><td>Scroll</td><td>part of 17 scroll refs</td></tr>
+</table>
+
+<h2>Quick Checklist</h2>
+<ol style="padding-left:20px;line-height:2">
+<li>Check the <strong>layer</strong> — UI/VERTICAL = stop, always red</li>
+<li>Check the <strong>name</strong> — measure, preview, stage, panel, interaction, scroll, render, animation, drag, indicator, DOM? Likely red</li>
+<li>Check for <strong><code>window</code> / <code>document</code> usage</strong> in the entry point — any direct use of browser globals = red</li>
+<li>Check <strong><code>getDependencyAPIs()</code></strong> — does it depend on any known red API or root cause above? If yes, red unless there is an explicit client/server split</li>
+<li>Check <strong>hook/slot contributions</strong> — if the API exposes hooks, each contributor must be checked separately</li>
+<li>Check for <strong>BI</strong> — BI APIs are not automatically red; they can run server-side</li>
+<li>Check for <strong>dialogs / confirmation flows</strong> — <code>confirm*</code>, <code>removeWith*</code>, <code>*Dialog*</code> = strong signal of client-only</li>
+</ol>
+
+</div><!-- /s-classify -->
 
 </div><!-- /strategy -->
 
