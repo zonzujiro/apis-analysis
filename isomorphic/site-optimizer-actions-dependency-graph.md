@@ -39,7 +39,7 @@ Each action and the L1 APIs it directly depends on, color-coded.
 | **SET_MOUSE_EFFECT_ANIMATION** | EditorUIAPI 🔴, ComponentPointerFactoryAPI 🟢, AnimationFlowsPrivateAPI 🟢, ComponentReactionsAPI 🟢 |
 | **SET_SCROLL_ANIMATION** | EditorUIAPI 🔴, ComponentPointerFactoryAPI 🟢, AnimationFlowsPrivateAPI 🟢, ComponentReactionsAPI 🟢 |
 | **SET_PRESET** | EditorPlatformAPI 🟠 |
-| **REMOVE_COMPONENT** | ComponentFlowsSiteOptimizerActionsPrivateAPI 🟢 → ComponentFlowsAPI 🟢, ComponentHierarchyFlowsAPI 🟢 |
+| **REMOVE_COMPONENT** | ComponentFlowsSiteOptimizerActionsPrivateAPI 🔴 → ComponentFlowsAPI 🟢 (`removeComponent` full UI flow is RED; `unstable_removeComponent` is GREEN), ComponentHierarchyFlowsAPI 🟢 |
 | **UPDATE_PARENT** | ComponentFlowsSiteOptimizerActionsPrivateAPI 🟢 → ComponentHierarchyFlowsAPI 🟢 |
 | **SET_STYLE** | GenericStyleAPI 🟢, EditorPlatformAPI 🟠, ExperimentsAPI 🟢 |
 | **SET_DATA** | EditorPlatformAPI 🟠 |
@@ -62,7 +62,7 @@ Used by: ADD_COMPONENT, PIN_TO_PAGE, UNPIN_FROM_PAGE
 |---------------|-------|-------|
 | LayoutHeursticsDerivativeStateAPI | 🔴 | Measurement-based heuristics |
 | ComponentTypeAPI | 🟢 | |
-| HistoryAPI | 🔴 | Not available on server (explicit rule) |
+| HistoryAPI | 🟠 | Server-compatible implementation exists (no-op history); batchHistory() wrapping is safe |
 | ComponentLayoutAPI_deprecated | 🔴 | Deprecated, must not exist on server |
 | PinnedToContainerDerivativeStateAPI | 🔴 | → L3: LayoutHeuristicsAPI 🔴, PreviewAPI 🔴, EditorCacheAPI 🔴 — all deps are RED, no isomorphic subset |
 | StageContextBuilderAPI | 🔴 | Canvas/stage is UI concept |
@@ -87,7 +87,7 @@ Used by: ADD_COMPONENT, PIN_TO_PAGE, UNPIN_FROM_PAGE
 | ComponentEditorAPI | 🟠 | |
 | ComponentRoutingAPI | 🟢 | |
 | PagesDataServiceAPI | 🟠 | |
-| InteractionContextAPI | 🔴 | Enter/exit/runInContext for hover/click interactions |
+| InteractionContextAPI | 🟠 | General analysis reclassified to GREEN (generic scope wrapper, DATA_SERVICE layer — see ADD_COMPONENT analysis); specific usage in PinnedToContainerFlowsAPI needs verification |
 | EditorPointerAPI | 🟢 | |
 
 ### LayoutConverterAPI 🟠 (21 L2 deps)
@@ -108,7 +108,7 @@ Used by: ADD_COMPONENT (via migration path), MIGRATION
 | SystemComponentsDerivativeStateAPI | 🟢 | |
 | GlobalVariablesDerivativeStateAPI | 🟢 | |
 | EditorPointerAPI | 🟢 | |
-| SharedBlocksAPI | 🟢 | |
+| SharedBlocksAPI | 🔴 | *(reclassified)* Uses `pagesDataServiceAPI.getFocusedPage/getCurrentPage()` (forbidden DS ops) + `previewAPI.memoizeForSiteUpdates()` (PreviewAPI = RED) |
 | SuperGridCellDerivativeStateAPI | 🟢 | |
 | ComponentTypeAPI | 🟢 | |
 | ComponentFlowsAPI | 🟢 | |
@@ -167,7 +167,7 @@ Reached via PinnedToContainerFlowsAPI
 
 Master table of all ~67 unique APIs across the dependency graph, classified by client-coupling.
 
-### 🔴 RED — Definitely Client-Coupled (15 APIs)
+### 🔴 RED — Definitely Client-Coupled (17 APIs)
 
 | # | API | Reason | Reached Via |
 |---|-----|--------|-------------|
@@ -177,33 +177,35 @@ Master table of all ~67 unique APIs across the dependency graph, classified by c
 | 4 | **ComponentLayoutAPI_deprecated** | Deprecated — must not exist on server | PinnedToContainerFlowsAPI (L2), PinnedToContainerDerivativeStateAPI (L3) |
 | 5 | **PreviewAPI** | Stage/Preview Logic — no preview rendering on server | PinnedToContainerDerivativeStateAPI (L3) |
 | 6 | **ComponentsLocatorAPI** | DOM Measurements — `getCompRefsFromPoint(Point)` uses viewport pixel coords | PinnedToContainerFlowsAPI (L2) |
-| 7 | **InteractionContextAPI** | Editor UI — enter/exit/runInContext for hover/click interactions | PinnedToContainerFlowsAPI (L2) |
-| 8 | **LayoutHeuristicsAPI** | DOM Measurements — heuristics based on DOM measurements | PinnedToContainerDerivativeStateAPI (L3) |
-| 9 | **LayoutHeursticsDerivativeStateAPI** | DOM Measurements — derived from measurement-based heuristics | PinnedToContainerFlowsAPI (L2) |
-| 10 | **EditorCacheAPI** | Editor State — client-side editor caching | PinnedToContainerDerivativeStateAPI (L3) |
-| 11 | **MockComponentMeasureAPI** | DOM Measurements — mock of DOM measurement API | PinnedToContainerEntryPoint (VERTICAL layer) |
-| 12 | **ScrolledComponentsDerivativeStateAPI** | Scroll — scrolling is client-only | PinnedToContainerEntryPoint (VERTICAL layer) |
-| 13 | **HistoryAPI** | *(reclassified from 🟠)* — explicit rule: not available on the server | PinnedToContainerFlowsAPI (L2) |
-| 14 | **EditorFlowAPI** | *(reclassified from 🟠)* — deprecated in favour of `EditorUIAPI` (RED); includes UI notification deferral | ADD_COMPONENT, MIGRATION (L1) |
-| 15 | **PinnedToContainerDerivativeStateAPI** | *(reclassified from 🟠)* — depends on `PreviewAPI` + `LayoutHeuristicsAPI` + `EditorCacheAPI` (all RED root causes); no isomorphic subset | PinnedToContainerFlowsAPI (L2) |
+| 7 | **LayoutHeuristicsAPI** | DOM Measurements — heuristics based on DOM measurements | PinnedToContainerDerivativeStateAPI (L3) |
+| 8 | **LayoutHeursticsDerivativeStateAPI** | DOM Measurements — derived from measurement-based heuristics | PinnedToContainerFlowsAPI (L2) |
+| 9 | **EditorCacheAPI** | Editor State — client-side editor caching | PinnedToContainerDerivativeStateAPI (L3) |
+| 10 | **MockComponentMeasureAPI** | DOM Measurements — mock of DOM measurement API | PinnedToContainerEntryPoint (VERTICAL layer) |
+| 11 | **ScrolledComponentsDerivativeStateAPI** | Scroll — scrolling is client-only | PinnedToContainerEntryPoint (VERTICAL layer) |
+| 12 | **EditorFlowAPI** | *(reclassified from 🟠)* — deprecated in favour of `EditorUIAPI` (RED); includes UI notification deferral | ADD_COMPONENT, MIGRATION (L1) |
+| 13 | **PinnedToContainerDerivativeStateAPI** | *(reclassified from 🟠)* — depends on `PreviewAPI` + `LayoutHeuristicsAPI` + `EditorCacheAPI` (all RED root causes); no isomorphic subset | PinnedToContainerFlowsAPI (L2) |
+| 14 | **SharedBlocksAPI** | *(reclassified from 🟢)* — uses `pagesDataServiceAPI.getFocusedPage/getCurrentPage()` (forbidden DS ops) + `previewAPI.memoizeForSiteUpdates()` | LayoutConverterAPI (L2) |
+| 15 | **OdeditorLayoutBuilderAPI** | *(reclassified from 🟠)* — depends on `StageContextBuilderAPI` (Stage/Preview); confirmed RED in implementation analysis | ADD_COMPONENT getComponentStructure() (L1) |
+| 16 | **ComponentFlowsSiteOptimizerActionsPrivateAPI** | *(reclassified from 🟢)* — calls full UI flow `ComponentFlowsAPI.removeComponent()` which includes confirmation dialogs, selection clearing, render triggers | REMOVE_COMPONENT site-opt action (L1) |
 
 ### 🟠 ORANGE — Needs Splitting / Partial Client Coupling (9 APIs)
 
-> HistoryAPI, EditorFlowAPI, and PinnedToContainerDerivativeStateAPI have been reclassified to RED — see section below.
+> EditorFlowAPI, PinnedToContainerDerivativeStateAPI, SharedBlocksAPI, OdeditorLayoutBuilderAPI, and ComponentFlowsSiteOptimizerActionsPrivateAPI have been reclassified to RED (see above). HistoryAPI has been reclassified back to 🟠 ORANGE (server-compatible implementation exists). InteractionContextAPI moved from RED to ORANGE (confirmed GREEN in addComponent context; usage in PinnedToContainerFlowsAPI still needs verification).
 
 | # | API | Server-OK Methods | Client-Coupled Methods | Notes |
 |---|-----|-------------------|----------------------|-------|
-| 1 | **PagesDataServiceAPI** | `isPage()`, `doesPageExist()`, `getPageData()`, `getPageIdList()` | `getFocusedPageId()`, `getCurrentPageId()`, `getCurrentPage()`, `getFocusedPage()`, navigation listeners — **Editor State** (RED category) | Split to PagesClientDataServiceAPI |
+| 1 | **PagesDataServiceAPI** | `isPage()`, `getPageData()` | `doesPageExist()` and `getPageIdList()` — **forbidden DS ops** (`pages.doesPageExist`, `pages.getPageIdList`); `getFocusedPageId()`, `getCurrentPageId()`, `getCurrentPage()`, `getFocusedPage()` — forbidden + Editor State | Split to PagesClientDataServiceAPI; server-safe surface is smaller than assumed |
 | 2 | **ComponentEditorAPI** | `hasSectionBehaviors()`, `getAddComponentStrategy()` | Extends `UiBehaviorsStageAPI`, `UiBehaviorsWorkspaceAPI` — **Stage/Preview + Editor UI** (both RED categories) | Large API needing significant split |
 | 3 | **PositionDerivativeStateAPI** | `getPosition()`, `isStickyPosition()` — data-based | `canSetStickyPosition()` may depend on measurements | Verify implementation deps |
 | 4 | **ComponentEditorBIAPI** | All BI sending (BI is server-OK per classification rules) | Depends on `PreviewAPI` (RED root cause) — the dep, not the BI itself, is the problem | Fix: remove PreviewAPI dep, BI sending is fine on server |
-| 5 | **AddPanelDataAPI** | `getData()` returns component templates | "Panel" name = Editor UI signal; panel concept is client-only | Extract data-only interface |
-| 6 | **OdeditorLayoutBuilderAPI** | `getCompLayout()` pure computation | May depend on measurement hints | **Unverified** — needs implementation check |
-| 7 | **EditorPlatformAPI** | SDK host concept | `getWorkerManager()` — browser Web Workers are client-only | Need server-side SDK host |
-| 8 | **PinnedToContainerFlowsAPI** | Pin/unpin concept is isomorphic | Depends on 10+ RED APIs (ComponentMeasureAPI, StageContextBuilderAPI, etc.) | Current impl is RED; migration target |
-| 9 | **LayoutConverterAPI** | Migration logic concept is isomorphic | Depends on `ComponentMeasureAPI` (RED root cause) | Current impl is RED; migration target |
+| 5 | **AddPanelDataAPI** | `getData()` returns component templates | "Panel" name = Editor UI signal; panel concept is client-only | Unverified — needs implementation check |
+| 6 | **HistoryAPI** | `add()`, `canUndo()`, `current()` methods map to `ds.history.*` — history DS ops available on server | Depends on `PreviewDisplayAPI` in the entry point; specific server path needs verification | ORANGE pending full verification; keep as-is |
+| 7 | **InteractionContextAPI** | *(reclassified from 🔴)* — confirmed GREEN in addComponent flow (generic scope wrapper, DATA_SERVICE layer) | Usage in PinnedToContainerFlowsAPI may differ — needs verification | If PinnedToContainerFlowsAPI usage is the same `runInContext()` pattern, fully GREEN |
+| 8 | **EditorPlatformAPI** | SDK host concept | `getWorkerManager()` — browser Web Workers are client-only | Need server-side SDK host |
+| 9 | **PinnedToContainerFlowsAPI** | Pin/unpin concept is isomorphic | Depends on 10+ RED APIs (ComponentMeasureAPI, StageContextBuilderAPI, etc.) | Current impl is RED; migration target |
+| 10 | **LayoutConverterAPI** | Migration logic concept is isomorphic | Depends on `ComponentMeasureAPI` + `SharedBlocksAPI` (both RED) | Current impl is RED; migration target |
 
-### 🟢 GREEN — Server-Ready (43 APIs)
+### 🟢 GREEN — Server-Ready (44 APIs)
 
 | # | API | Notes |
 |---|-----|-------|
@@ -215,7 +217,7 @@ Master table of all ~67 unique APIs across the dependency graph, classified by c
 | 6 | TemplatesCmsDataServiceAPI | Template resolution |
 | 7 | ComponentRoutingAPI | Routing/CSS override targets |
 | 8 | ComponentPointerFactoryAPI | Pointer creation |
-| 9 | ComponentFlowsAPI | Component CRUD flows |
+| 9 | ComponentFlowsAPI | Component CRUD flows (`unstable_removeComponent` is GREEN; `removeComponent` full UI flow is not) |
 | 10 | ComponentHierarchyFlowsAPI | Parent/child mutations |
 | 11 | ComponentHierarchyAPI | Parent/child navigation |
 | 12 | GenericStyleAPI | Style updates |
@@ -225,7 +227,7 @@ Master table of all ~67 unique APIs across the dependency graph, classified by c
 | 16 | ComponentLayoutDerivativeStateAPI | Layout state queries |
 | 17 | LayoutBuilderAPI | Layout construction |
 | 18 | ComponentReactionsAPI | Reactions data |
-| 19 | AnimationFlowsPrivateAPI | Animation logic (L2 deps are all green) |
+| 19 | AnimationFlowsPrivateAPI | Animation logic (all 9 L2 deps are green) |
 | 20 | ComponentTriggersAPI | Trigger types |
 | 21 | ComponentEffectsFlowsAPI | Effects mutations |
 | 22 | ComponentEffectsDerivativeStateAPI | Effects state |
@@ -246,14 +248,12 @@ Master table of all ~67 unique APIs across the dependency graph, classified by c
 | 37 | ContentMaxWidthFlowsAPI | Content width flows |
 | 38 | SystemComponentsDerivativeStateAPI | System component state |
 | 39 | GlobalVariablesDerivativeStateAPI | Global variables |
-| 40 | SharedBlocksAPI | Shared blocks |
-| 41 | SuperGridCellDerivativeStateAPI | Grid cell state |
-| 42 | AutoGridUtilsAPI | Grid utilities |
-| 43 | HeaderComponentsManagementAPI | Header management |
-| 44 | EditorPlatformHostIntegrationAPI | Platform host integration |
-| 45 | ResponsiveFedopsAPI | Fedops logging |
-| 46 | ResponsiveBIAPI | BI reporting |
-| 47 | ComponentFlowsSiteOptimizerActionsPrivateAPI | Private wrapper (green deps) |
+| 40 | SuperGridCellDerivativeStateAPI | Grid cell state |
+| 41 | AutoGridUtilsAPI | Grid utilities |
+| 42 | HeaderComponentsManagementAPI | Header management |
+| 43 | EditorPlatformHostIntegrationAPI | Platform host integration |
+| 44 | ResponsiveFedopsAPI | Fedops logging |
+| 45 | ResponsiveBIAPI | BI reporting |
 
 ---
 
@@ -298,9 +298,10 @@ Master table of all ~67 unique APIs across the dependency graph, classified by c
 - SET_STYLE has two paths: GenericStyleAPI 🟢 (legacy) and SDK path 🟠
 
 **Recommended approach:**
-1. REMOVE_COMPONENT, UPDATE_PARENT, REORDER → already server-ready (all green)
-2. SET_STYLE → use GenericStyleAPI path directly (skip SDK/experiment toggle)
-3. SET_DATA → create server-side SDK host
+1. UPDATE_PARENT, REORDER → already server-ready (all green)
+2. REMOVE_COMPONENT → **RED** — `ComponentFlowsSiteOptimizerActionsPrivateAPI.removeComponent()` delegates to the full UI flow `ComponentFlowsAPI.removeComponent()`. Fix: call `ComponentHierarchyFlowsAPI.unstable_removeComponent()` directly (one-line change in the private API)
+3. SET_STYLE → use GenericStyleAPI path directly (skip SDK/experiment toggle)
+4. SET_DATA → create server-side SDK host
 
 ### Group 5: flexSiteOptimizerEntryPoint (SET_FLEX_*_LAYOUT, SET_FLEX_GAPS)
 
