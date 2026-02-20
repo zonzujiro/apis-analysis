@@ -108,6 +108,13 @@ flowchart LR
     classDef dead fill:#2a2a2a,stroke:#555,color:#777
 ```
 
+**Legend:**
+- 🔴 Red — client-only, breaking
+- 🟡 Yellow — ambiguous, depends on contributors or further research
+- ⬛ Grey — isomorphic (confirmed safe)
+- 🟢 Green — isomorphic core (target)
+- ⚫ Dark — dead code, eliminated by settled experiments
+
 ---
 
 ## Dead Paths (eliminated by settled experiments)
