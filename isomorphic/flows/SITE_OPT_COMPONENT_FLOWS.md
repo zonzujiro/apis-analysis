@@ -143,25 +143,3 @@ mutation, not a user gesture.
    Server execution should bypass the SDK experiment toggle.
 4. **SET_DATA and the SDK pattern** are the biggest architectural challenge — they require a
    server-side SDK host implementation, shared with SET_PRESET.
-
----
-
-## `editorFlowAPI.contributePlugin` — Layout & Hierarchy Plugins
-
-`EditorFlowAPI` is **not** in the deps of `componentFlowsSiteOptimizerActionsEntryPoint`, so these actions likely do not call `EditorFlowAPI.run()` directly. Layout/hierarchy-topic plugins would not fire for REORDER, UPDATE_PARENT, SET_STYLE, SET_DATA, or REMOVE_COMPONENT.
-
-If any of these actions were ever called from within an `EditorFlowAPI.run()` context:
-
-**Layout-topic plugins** (`SET_STYLE` path is the plausible trigger):
-AutoGrid, AutoDOM×2, Mesh layout, Section Fixer (ORANGE), Content max-width — all RED/ORANGE, all safely skippable on server.
-
-**Hierarchy-topic plugins** (`REORDER`, `UPDATE_PARENT`, `REMOVE_COMPONENT` are the plausible triggers):
-
-| Plugin | Repo | Classification |
-|--------|------|---------------|
-| AutoGrid hierarchy recalculation | Harmony | ✗ RED — `ComponentMeasureAPI` + `StageContextBuilderAPI` |
-| Component selection update | REP | ✗ RED — `ComponentInteractionAPI.select()` (UI selection) |
-| Mesh layout generate auto-grid | REP | ✗ RED — `MeshLayoutAPI.generateAutoGrid()` |
-| Interactions panel close | REP | ✗ RED — `InteractionsPanelFlowsPrivateAPI.closePanel()` (UI panel) |
-
-All 4 hierarchy plugins are RED — all UI/stage state, no document-model mutations. Skipping on server is correct.
