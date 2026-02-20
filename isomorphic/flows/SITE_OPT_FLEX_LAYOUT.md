@@ -87,3 +87,22 @@ SET_FLEX_CONTAINER_LAYOUT / SET_FLEX_ITEM_LAYOUT / SET_FLEX_GAPS
 
 Once the `StageContextBuilderAPI` stub is in place, these three actions require
 **no further migration work**.
+
+---
+
+## `editorFlowAPI.contributePlugin` — Layout-Topic Plugins
+
+`EditorFlowAPI` is **not** in the deps of `flexSiteOptimizerEntryPoint`, so these actions likely do not call `EditorFlowAPI.run()` directly. Layout-topic plugins would not fire.
+
+If the actions are ever called from within an `EditorFlowAPI.run()` context higher up the call stack, the following `['layout']`-topic plugins would trigger (all RED or ORANGE, all document-model-safe to skip on server):
+
+| Plugin | Repo | Classification |
+|--------|------|---------------|
+| AutoGrid layout recalculation | Harmony | ✗ RED — `ComponentMeasureAPI` + `StageContextBuilderAPI` |
+| AutoDOM render-order reordering | Harmony | ✗ RED — `AutoDOMOrderFlowsAPI` → `ComponentMeasureAPI` |
+| AutoDOM render-order reordering | REP | ✗ RED — same chain |
+| Mesh layout freeze + margin fix (critical¹) | REP | ✗ RED — `MeshLayoutAPI`, layout mutation |
+| Section Fixer integrity check | REP | ⚠️ ORANGE — `ComponentEditorAPI.hasSectionBehaviors()`, `PagesDataServiceAPI` |
+| Content max-width snackbar | REP | ✗ RED — UI notification, no document mutation |
+
+> ¹ Registered with `shouldRollbackOnFailure=true` — runs before the transaction.

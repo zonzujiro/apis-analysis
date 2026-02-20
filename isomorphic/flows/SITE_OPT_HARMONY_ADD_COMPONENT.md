@@ -148,6 +148,22 @@ UI behavior APIs. This requires a server-safe `ComponentEditorAPI` that exposes
 
 ---
 
+## `editorFlowAPI.contributePlugin` — Add-Topic Plugins
+
+This action is wrapped in `EditorFlowAPI.run()`, so all `['add']`-topic plugins fire around the transaction. Both repos contribute add-topic plugins (full detail in `ADD_COMPONENT_ISOMORPHIC_ANALYSIS.md`):
+
+| Plugin | Repo | Classification |
+|--------|------|---------------|
+| AutoGrid layout recalculation | Harmony | ✗ RED — `ComponentMeasureAPI` + `StageContextBuilderAPI` |
+| AutoDOM render-order reordering | Harmony | ✗ RED — `AutoDOMOrderFlowsAPI` → `ComponentMeasureAPI` |
+| Component selection on add | REP | ✗ RED — `ComponentSelectFlowsAPI` (UI selection) |
+| Set last added component | REP | ✗ RED — `ComponentInteractionAPI` + `StageContextBuilderAPI` |
+| AutoDOM render-order reordering | REP | ✗ RED — same chain as Harmony |
+
+All 5 are RED — correctly skipped when `EditorFlowAPI.run()` is replaced with `TransactionsAPI.run()` (Solution 1). AutoGrid's layout recalculation is already addressed by Solution 2 (caller provides layout).
+
+---
+
 ## Key Takeaways
 
 1. **The experiment-OFF path is the easy win** — with EditorFlowAPI replaced and layout
@@ -159,3 +175,4 @@ UI behavior APIs. This requires a server-safe `ComponentEditorAPI` that exposes
 4. **This action is simpler than `unstable_addComponent`** — no hook infrastructure, no
    `AfterAddComponentSlot`, no measurement-based layout sync. The path to server-ready
    is shorter here.
+5. **All add-topic plugins are RED** — replacing `EditorFlowAPI.run()` with `TransactionsAPI.run()` correctly skips them.
