@@ -407,3 +407,43 @@ Verdict: **RED**. TPA add is inherently a browser flow (TPA SDK, iframe, stage p
 **File:** `editor-package-add-panel-logic/src/createAddPanelLogicAPI.ts`
 
 Used for image/video/SVG adds to calculate initial layout from media metadata. Depends on `StageContextBuilderAPI` + `PreviewDisplayAPI` — **RED**. Potential fix: extract the pure aspect-ratio math into a standalone utility.
+
+---
+
+## `editorFlowAPI.contributePlugin` — Add-Topic Plugins
+
+`EditorFlowAPI.run()` fires plugins contributed via `editorFlowAPI.contributePlugin` (with `topics: ['add']`) **around** the add-component transaction. These run at the outer `EditorFlowAPI` wrapper level — distinct from the hook system (`beforeAddComponent` / `afterAddComponent` / `AfterAddComponentSlot`) which runs inside `unstable_addComponent`.
+
+**Consequence for server migration:** Replacing `EditorFlowAPI.run()` with `TransactionsAPI.run()` (Fix 2 in TLDR) skips all these plugins on the server. This is correct for the RED ones, but the AutoDOM reordering needs explicit consideration.
+
+### Harmony — add-topic plugins (2)
+
+| Package | Plugin | What It Does | Classification |
+|---------|--------|-------------|---------------|
+| `odeditor-package-auto-grid` | AutoGrid add | Triggers grid layout recalculation on parent containers; uses `ComponentMeasureAPI` (DOM measurement) + `StageContextBuilderAPI` | ✗ RED |
+| `odeditor-package-auto-dom` | AutoDOM add | Calls `AutoDOMOrderFlowsAPI.runAutoReorderInParent()` to auto-reorder DOM elements after section add | ✗ RED — `AutoDOMOrderFlowsAPI` → `DOMSortingAPI` → `ComponentMeasureAPI` → `PreviewDisplayAPI` (iframe DOM) |
+
+### REP — add-topic plugins (3)
+
+| Package | Plugin | What It Does | Classification |
+|---------|--------|-------------|---------------|
+| `editor-package-components` | Component selection | Selects newly added component if `selectOnStage` set; uses `ComponentSelectFlowsAPI` + `StageContextBuilderAPI` | ✗ RED |
+| `editor-package-component-editors` | Set last added | Tracks last added component for UI focus; uses `ComponentInteractionAPI` + `StageContextBuilderAPI` | ✗ RED |
+| `editor-package-dom-order` | AutoDOM order | Calls `AutoDOMOrderFlowsAPI.runAutoReorderInParent()`; same as Harmony version | ✗ RED — same chain: `ComponentMeasureAPI` → `PreviewDisplayAPI` |
+
+### Plugin execution order (within `EditorFlowAPI.run()`)
+
+```
+1. Before-render plugins  (shouldRollbackOnFailure=true, requiresPostActionMeasurements=false)
+2. Critical plugins       (shouldRollbackOnFailure=true)
+3. Transaction runs       ← unstable_addComponent lives here
+4. Allowed-failure plugins (default)
+```
+
+AutoGrid and AutoDOM run as allowed-failure plugins (post-transaction).
+
+### Server path implication
+
+- **AutoGrid (RED)**: Layout recalculation after add is a stage/render concern. On server, caller provides layout directly — already captured in SITE_OPT_HARMONY_ADD_COMPONENT.md Solution 2.
+- **Component selection + Set last added (RED)**: Pure UI state — correctly skipped on server.
+- **AutoDOMOrderFlowsAPI (RED)**: `DOMSortingAPI` → `ComponentMeasureAPI` → `PreviewDisplayAPI` (iframe bounding box measurements). DOM reordering is a visual render-order concern — correctly skipped on server. The document model itself isn't affected by render order.
