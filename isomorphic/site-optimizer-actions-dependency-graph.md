@@ -44,9 +44,9 @@ Each action and the L1 APIs it directly depends on, color-coded.
 | **SET_STYLE** | GenericStyleAPI 🟢, EditorPlatformAPI 🟠, ExperimentsAPI 🟢 |
 | **SET_DATA** | EditorPlatformAPI 🟠 |
 | **REORDER** | ComponentArrangementDerivativeStateAPI 🟢, ComponentArrangementFlowsAPI 🟢 |
-| **SET_FLEX_CONTAINER_LAYOUT** | ComponentLayoutFlowsAPI 🟢, ComponentLayoutDerivativeStateAPI 🟢, StageContextBuilderAPI 🔴 |
-| **SET_FLEX_ITEM_LAYOUT** | ComponentLayoutFlowsAPI 🟢, ComponentLayoutDerivativeStateAPI 🟢, StageContextBuilderAPI 🔴 |
-| **SET_FLEX_GAPS** | ComponentLayoutFlowsAPI 🟢, ComponentLayoutDerivativeStateAPI 🟢, LayoutBuilderAPI 🟢, StageContextBuilderAPI 🔴 |
+| **SET_FLEX_CONTAINER_LAYOUT** | ComponentLayoutFlowsAPI 🟢, ComponentLayoutDerivativeStateAPI 🟠, StageContextBuilderAPI 🔴 |
+| **SET_FLEX_ITEM_LAYOUT** | ComponentLayoutFlowsAPI 🟢, ComponentLayoutDerivativeStateAPI 🟠, StageContextBuilderAPI 🔴 |
+| **SET_FLEX_GAPS** | ComponentLayoutFlowsAPI 🟢, ComponentLayoutDerivativeStateAPI 🟠, LayoutBuilderAPI 🟢, StageContextBuilderAPI 🔴 |
 
 ---
 
@@ -79,7 +79,7 @@ Used by: ADD_COMPONENT, PIN_TO_PAGE, UNPIN_FROM_PAGE
 | ComponentArrangementDerivativeStateAPI | 🟢 | |
 | ComponentArrangementFlowsAPI | 🟢 | |
 | UnitOfWorkFlowAPI | 🟢 | |
-| ComponentLayoutDerivativeStateAPI | 🟢 | |
+| ComponentLayoutDerivativeStateAPI | 🟠 | *(reclassified)* — entry point declares StageContextBuilderAPI; `unstable_getCurrentEffectiveLayout` uses current stage context |
 | ExtendedDocumentServicesAPI | 🟢 | |
 | VariantsIteratorAPI | 🟢 | |
 | LayoutBuilderAPI | 🟢 | |
@@ -126,7 +126,7 @@ Used by: SET_*_ANIMATION (x4)
 |---------------|-------|
 | ComponentTriggersAPI | 🟢 |
 | ComponentEffectsFlowsAPI | 🟢 |
-| ComponentReactionsDerivativeStateAPI | 🟢 |
+| ComponentReactionsDerivativeStateAPI | 🟠 | *(reclassified)* — `getCurrentEffective()` calls `stageContextBuilderAPI.addCurrentContextToRef()`; animation flow uses only GREEN methods so AnimationFlowsPrivateAPI remains effectively GREEN for this use case |
 | ComponentEffectsDerivativeStateAPI | 🟢 |
 | VariantsIteratorAPI | 🟢 |
 | ComponentReactionsAPI | 🟢 |
@@ -142,6 +142,8 @@ Used by: SET_PRESET, SET_STYLE, SET_DATA
 |---------------|-------|-------|
 | EditorPlatformHostIntegrationAPI | 🟢 | Platform host integration |
 | WorkerManager (via getWorkerManager()) | 🔴 | Workers are client concept |
+
+**Method-level split:** `getStyle()` and `getData()` are 🟢 GREEN — they call `ComponentStyleAPI.getInBreakpoint()` and `ComponentDataAPI.get()` directly, bypassing WorkerManager entirely. Only the SDK mutation methods (`setStyle`, `setData`, `setPreset`) use the `WorkerManager → SDKHostContext` chain.
 
 ### PinnedToContainerDerivativeStateAPI 🟠 (L3 deps)
 
@@ -188,9 +190,9 @@ Master table of all ~67 unique APIs across the dependency graph, classified by c
 | 15 | **OdeditorLayoutBuilderAPI** | *(reclassified from 🟠)* — depends on `StageContextBuilderAPI` (Stage/Preview); confirmed RED in implementation analysis | ADD_COMPONENT getComponentStructure() (L1) |
 | 16 | **ComponentFlowsSiteOptimizerActionsPrivateAPI** | *(reclassified from 🟢)* — calls full UI flow `ComponentFlowsAPI.removeComponent()` which includes confirmation dialogs, selection clearing, render triggers | REMOVE_COMPONENT site-opt action (L1) |
 
-### 🟠 ORANGE — Needs Splitting / Partial Client Coupling (9 APIs)
+### 🟠 ORANGE — Needs Splitting / Partial Client Coupling (11 APIs)
 
-> EditorFlowAPI, PinnedToContainerDerivativeStateAPI, SharedBlocksAPI, OdeditorLayoutBuilderAPI, and ComponentFlowsSiteOptimizerActionsPrivateAPI have been reclassified to RED (see above). HistoryAPI has been reclassified back to 🟠 ORANGE (server-compatible implementation exists). InteractionContextAPI moved from RED to ORANGE (confirmed GREEN in addComponent context; usage in PinnedToContainerFlowsAPI still needs verification).
+> EditorFlowAPI, PinnedToContainerDerivativeStateAPI, SharedBlocksAPI, OdeditorLayoutBuilderAPI, and ComponentFlowsSiteOptimizerActionsPrivateAPI have been reclassified to RED (see above). HistoryAPI has been reclassified back to 🟠 ORANGE (server-compatible implementation exists). InteractionContextAPI moved from RED to ORANGE (confirmed GREEN in addComponent context; usage in PinnedToContainerFlowsAPI still needs verification). ComponentLayoutDerivativeStateAPI and ComponentReactionsDerivativeStateAPI reclassified from GREEN to ORANGE (both have StageContextBuilderAPI in entry point deps).
 
 | # | API | Server-OK Methods | Client-Coupled Methods | Notes |
 |---|-----|-------------------|----------------------|-------|
@@ -204,8 +206,10 @@ Master table of all ~67 unique APIs across the dependency graph, classified by c
 | 8 | **EditorPlatformAPI** | SDK host concept | `getWorkerManager()` — browser Web Workers are client-only | Need server-side SDK host |
 | 9 | **PinnedToContainerFlowsAPI** | Pin/unpin concept is isomorphic | Depends on 10+ RED APIs (ComponentMeasureAPI, StageContextBuilderAPI, etc.) | Current impl is RED; migration target |
 | 10 | **LayoutConverterAPI** | Migration logic concept is isomorphic | Depends on `ComponentMeasureAPI` + `SharedBlocksAPI` (both RED) | Current impl is RED; migration target |
+| 11 | **ComponentLayoutDerivativeStateAPI** | *(reclassified from 🟢)* — `getScopedLayout()`, `getEffectiveLayout()` take context-qualified pointers (likely server-safe); `unstable_getCurrentEffectiveLayout(comp)` reads current stage context | Entry point declares `StageContextBuilderAPI`; the "current" method is the blocker | Fix: stub `addCurrentContextToRef()` as identity on server → fully GREEN |
+| 12 | **ComponentReactionsDerivativeStateAPI** | *(reclassified from 🟢)* — `getCurrentEffective()` calls `stageContextBuilderAPI.addCurrentContextToRef()`; all other reaction/effect methods are GREEN | Used in AnimationFlowsPrivateAPI via GREEN methods only, so animation flow is not effectively blocked | Fix: same `StageContextBuilderAPI` identity stub → fully GREEN |
 
-### 🟢 GREEN — Server-Ready (44 APIs)
+### 🟢 GREEN — Server-Ready (42 APIs)
 
 | # | API | Notes |
 |---|-----|-------|
@@ -224,36 +228,34 @@ Master table of all ~67 unique APIs across the dependency graph, classified by c
 | 13 | ComponentArrangementDerivativeStateAPI | Z-order queries |
 | 14 | ComponentArrangementFlowsAPI | Z-order mutations |
 | 15 | ComponentLayoutFlowsAPI | Layout mutations |
-| 16 | ComponentLayoutDerivativeStateAPI | Layout state queries |
-| 17 | LayoutBuilderAPI | Layout construction |
-| 18 | ComponentReactionsAPI | Reactions data |
-| 19 | AnimationFlowsPrivateAPI | Animation logic (all 9 L2 deps are green) |
-| 20 | ComponentTriggersAPI | Trigger types |
-| 21 | ComponentEffectsFlowsAPI | Effects mutations |
-| 22 | ComponentEffectsDerivativeStateAPI | Effects state |
-| 23 | ComponentReactionsDerivativeStateAPI | Reactions state |
-| 24 | ComponentPointerBuilderAPI | Pointer building |
-| 25 | ComponentEffectsAPI | Effects CRUD |
-| 26 | VariantsIteratorAPI | Breakpoint iteration |
-| 27 | PointerComparisonAPI | Pointer equality |
-| 28 | ExperimentalFlowsAPI | Experimental features |
-| 29 | ComponentsDerivativeStateAPI | Component state queries |
-| 30 | ComponentTypeAPI | Component type metadata |
-| 31 | TransactionsAPI | Transaction management |
-| 32 | ExtendedDocumentServicesAPI | Extended DS utilities |
-| 33 | UnitOfWorkFlowAPI | Atomic operations |
-| 34 | SystemContainerDerivativeStateAPI | System container state |
-| 35 | ComponentVisibilityDerivativeStateAPI | Visibility state |
-| 36 | SuperGridDerivativeStateAPI | Grid state |
-| 37 | ContentMaxWidthFlowsAPI | Content width flows |
-| 38 | SystemComponentsDerivativeStateAPI | System component state |
-| 39 | GlobalVariablesDerivativeStateAPI | Global variables |
-| 40 | SuperGridCellDerivativeStateAPI | Grid cell state |
-| 41 | AutoGridUtilsAPI | Grid utilities |
-| 42 | HeaderComponentsManagementAPI | Header management |
-| 43 | EditorPlatformHostIntegrationAPI | Platform host integration |
-| 44 | ResponsiveFedopsAPI | Fedops logging |
-| 45 | ResponsiveBIAPI | BI reporting |
+| 16 | LayoutBuilderAPI | Layout construction |
+| 17 | ComponentReactionsAPI | Reactions data |
+| 18 | AnimationFlowsPrivateAPI | Animation logic (all L2 deps are green for animation use case; see ComponentReactionsDerivativeStateAPI note in ORANGE) |
+| 19 | ComponentTriggersAPI | Trigger types |
+| 20 | ComponentEffectsFlowsAPI | Effects mutations |
+| 21 | ComponentEffectsDerivativeStateAPI | Effects state |
+| 22 | ComponentPointerBuilderAPI | Pointer building |
+| 23 | ComponentEffectsAPI | Effects CRUD |
+| 24 | VariantsIteratorAPI | Breakpoint iteration |
+| 25 | PointerComparisonAPI | Pointer equality |
+| 26 | ExperimentalFlowsAPI | Experimental features |
+| 27 | ComponentsDerivativeStateAPI | Component state queries |
+| 28 | ComponentTypeAPI | Component type metadata |
+| 29 | TransactionsAPI | Transaction management |
+| 30 | ExtendedDocumentServicesAPI | Extended DS utilities |
+| 31 | UnitOfWorkFlowAPI | Atomic operations |
+| 32 | SystemContainerDerivativeStateAPI | System container state |
+| 33 | ComponentVisibilityDerivativeStateAPI | Visibility state |
+| 34 | SuperGridDerivativeStateAPI | Grid state |
+| 35 | ContentMaxWidthFlowsAPI | Content width flows |
+| 36 | SystemComponentsDerivativeStateAPI | System component state |
+| 37 | GlobalVariablesDerivativeStateAPI | Global variables |
+| 38 | SuperGridCellDerivativeStateAPI | Grid cell state |
+| 39 | AutoGridUtilsAPI | Grid utilities |
+| 40 | HeaderComponentsManagementAPI | Header management |
+| 41 | EditorPlatformHostIntegrationAPI | Platform host integration |
+| 42 | ResponsiveFedopsAPI | Fedops logging |
+| 43 | ResponsiveBIAPI | BI reporting |
 
 ---
 

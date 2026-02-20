@@ -20,9 +20,11 @@ Each dep is classified using `ISOMORPHIC_CLASSIFICATION_RULES.md`.
 | ComponentEditorBIAPI | EDITOR_INFRA | Same RED deps as ComponentEditorAPI (shared entry point) | TraverseDataServiceAPI, SequenceLoaderAPI | ORANGE — BI itself is server-OK, needs its own entry point to shed ComponentEditorAPI's dep chain |
 | AddPanelDataAPI | DERIVATIVE_STATE | PanelsAPI, AddPanelStateAPI | EditorParamsAPI | ORANGE — data fetch is isomorphic, panel state is RED |
 | OdeditorLayoutBuilderAPI | DERIVATIVE_STATE | ComponentMeasureAPI | LayoutGeneratorAPI | **Reclassify → RED** — direct ComponentMeasureAPI dep (root cause, 102 refs) |
-| EditorPlatformAPI | DATA_SERVICE | WorkerManager (runtime call) | — | ORANGE → close to GREEN, only runtime WorkerManager is the blocker |
+| EditorPlatformAPI | DATA_SERVICE | WorkerManager (runtime call) | — | ORANGE → close to GREEN, only runtime WorkerManager is the blocker; `getStyle()`/`getData()` are fully GREEN (bypass WorkerManager) |
 | PinnedToContainerFlowsAPI | FLOWS | 10+ RED deps | PositionDerivativeStateAPI, ComponentEditorBIAPI, ComponentEditorAPI, PagesDataServiceAPI | ORANGE — concept is isomorphic, impl is not |
-| LayoutConverterAPI | FLOWS | ComponentMeasureAPI | — | ORANGE — concept is isomorphic, single RED root cause |
+| LayoutConverterAPI | FLOWS | ComponentMeasureAPI, SharedBlocksAPI | — | ORANGE — concept is isomorphic, 2 RED root causes |
+| ComponentLayoutDerivativeStateAPI | DERIVATIVE_STATE (REP) | StageContextBuilderAPI (via `unstable_getCurrentEffectiveLayout`) | — | ORANGE — reclassified from GREEN; pointer-based methods likely server-safe; single stub fix → GREEN |
+| ComponentReactionsDerivativeStateAPI | DERIVATIVE_STATE (REP) | StageContextBuilderAPI (via `getCurrentEffective`) | — | ORANGE — reclassified from GREEN; other reaction/effect methods are GREEN; same stub fix → GREEN |
 
 ---
 
@@ -115,7 +117,7 @@ flowchart LR
     API --> CEA["ComponentEditorAPI"]:::orange
     API --> PCD["PinnedToContainerDerivativeStateAPI"]:::red
     API --> EF["ExperimentalFlowsAPI"]:::green
-    API --> CLDA["ComponentLayoutDerivativeStateAPI"]:::green
+    API --> CLDA["ComponentLayoutDerivativeStateAPI"]:::orange
     API --> CPF["ComponentPointerFactoryAPI"]:::green
     API --> CR["ComponentRoutingAPI"]:::green
 
@@ -278,7 +280,7 @@ flowchart LR
     API --> CADA["ComponentArrangementDerivativeStateAPI"]:::green
     API --> CAFA["ComponentArrangementFlowsAPI"]:::green
     API --> UOW["UnitOfWorkFlowAPI"]:::green
-    API --> CLDA["ComponentLayoutDerivativeStateAPI"]:::green
+    API --> CLDA["ComponentLayoutDerivativeStateAPI"]:::orange
     API --> EDSA["ExtendedDocumentServicesAPI"]:::green
     API --> VIA["VariantsIteratorAPI"]:::green
     API --> LBA["LayoutBuilderAPI"]:::green
@@ -320,7 +322,7 @@ flowchart LR
     API --> SCMDA["SystemComponentsDerivativeStateAPI"]:::green
     API --> GVDA["GlobalVariablesDerivativeStateAPI"]:::green
     API --> EPA["EditorPointerAPI"]:::green
-    API --> SBA["SharedBlocksAPI"]:::green
+    API --> SBA["SharedBlocksAPI"]:::red
     API --> SGCDA["SuperGridCellDerivativeStateAPI"]:::green
     API --> CTA["ComponentTypeAPI"]:::green
     API --> CFA["ComponentFlowsAPI"]:::green
@@ -335,9 +337,69 @@ flowchart LR
     classDef green fill:#1a3a1a,stroke:#4c4,color:#eee
 ```
 
-**RED deps (1):** `ComponentMeasureAPI` — the single blocker. 20 out of 21 deps are green.
+**RED deps (2):** `ComponentMeasureAPI` — measurement root cause; `SharedBlocksAPI` — *(reclassified)* uses `pagesDataServiceAPI.getFocusedPage/getCurrentPage()` (forbidden DS ops) + `previewAPI.memoizeForSiteUpdates()`.
 
-**Fix:** Replace `ComponentMeasureAPI` usage with data-input parameters. This is the cleanest migration candidate among the heavy ORANGE APIs.
+**Fix:** Replace `ComponentMeasureAPI` usage with data-input parameters; replace `SharedBlocksAPI` with server-safe shared blocks data service.
+
+---
+
+---
+
+## 10. ComponentLayoutDerivativeStateAPI
+
+**Layer:** DERIVATIVE_STATE (REP)
+
+```mermaid
+flowchart LR
+    API["ComponentLayoutDerivativeStateAPI\nDERIVATIVE_STATE"]:::orange
+
+    API --> CLA["ComponentLayoutAPI"]:::green
+    API --> CLPPA["ComponentLayoutPointerPrivateAPI"]:::green
+    API --> CLDPA["ComponentLayoutDerivativeStatePrivateAPI"]:::green
+    API --> SCB["StageContextBuilderAPI"]:::red
+    API --> CHA["ComponentHierarchyAPI"]:::green
+
+    classDef red fill:#4a1a1a,stroke:#f44,color:#eee
+    classDef orange fill:#3a2a0a,stroke:#f90,color:#eee
+    classDef green fill:#1a3a1a,stroke:#4c4,color:#eee
+```
+
+**RED deps (1):** `StageContextBuilderAPI` — used by `unstable_getCurrentEffectiveLayout(comp)` to inject current variant/breakpoint context into a bare comp ref.
+
+**Method split:**
+- `getScopedLayout(pointer)`, `getEffectiveLayout(pointer)` — take context-qualified pointers; server-safe if caller provides the right pointer
+- `unstable_getCurrentEffectiveLayout(comp)` — reads current stage context (RED); not used by site-optimizer actions
+
+**Fix:** Implement `StageContextBuilderAPI.addCurrentContextToRef()` as identity on server (returns the ref unchanged). This unblocks all three methods and makes the API fully GREEN. Same stub unblocks all flex actions.
+
+---
+
+## 11. ComponentReactionsDerivativeStateAPI
+
+**Layer:** DERIVATIVE_STATE (REP)
+
+```mermaid
+flowchart LR
+    API["ComponentReactionsDerivativeStateAPI\nDERIVATIVE_STATE"]:::orange
+
+    API --> SCB["StageContextBuilderAPI"]:::red
+    API --> CRAPI["ComponentReactionsAPI"]:::green
+    API --> DS["DocumentServicesAPI"]:::green
+
+    classDef red fill:#4a1a1a,stroke:#f44,color:#eee
+    classDef orange fill:#3a2a0a,stroke:#f90,color:#eee
+    classDef green fill:#1a3a1a,stroke:#4c4,color:#eee
+```
+
+**RED deps (1):** `StageContextBuilderAPI` — used by `getCurrentEffective()` to inject current variant/breakpoint context.
+
+**Method split:**
+- `getCurrentEffective(pointer)` — calls `stageContextBuilderAPI.addCurrentContextToRef()` → ORANGE
+- All other methods (reaction/effect queries) — do not use StageContextBuilderAPI → GREEN
+
+**Used by:** `AnimationFlowsPrivateAPI` — only GREEN methods called in the animation path, so `AnimationFlowsPrivateAPI` remains effectively GREEN for site-optimizer animation actions.
+
+**Fix:** Same `StageContextBuilderAPI` identity stub as above → fully GREEN.
 
 ---
 
@@ -347,3 +409,5 @@ flowchart LR
 |---|---|---|---|
 | `PositionDerivativeStateAPI` | 🟠 | 🔴 | `PinnedToContainerDerivativeStateAPI` (RED) + `ComponentLayoutAPI_deprecated` (RED) are direct deps |
 | `OdeditorLayoutBuilderAPI` | 🟠 | 🔴 | Direct `ComponentMeasureAPI` dep confirmed — measurement root cause |
+| `ComponentLayoutDerivativeStateAPI` | 🟢 | 🟠 | Entry point declares `StageContextBuilderAPI`; `unstable_getCurrentEffectiveLayout` uses current stage context |
+| `ComponentReactionsDerivativeStateAPI` | 🟢 | 🟠 | Entry point declares `StageContextBuilderAPI`; `getCurrentEffective()` uses current stage context |
