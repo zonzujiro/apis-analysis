@@ -412,6 +412,8 @@ Used for image/video/SVG adds to calculate initial layout from media metadata. D
 
 ## `editorFlowAPI.contributePlugin` — Add-Topic Plugins
 
+> **Full registry** (all topics — add, layout, hierarchy): see [EDITOR_FLOW_PLUGINS.md](EDITOR_FLOW_PLUGINS.md).
+
 `EditorFlowAPI.run()` fires plugins contributed via `editorFlowAPI.contributePlugin` (with `topics: ['add']`) **around** the add-component transaction. These run at the outer `EditorFlowAPI` wrapper level — distinct from the hook system (`beforeAddComponent` / `afterAddComponent` / `AfterAddComponentSlot`) which runs inside `unstable_addComponent`.
 
 **Consequence for server migration:** Replacing `EditorFlowAPI.run()` with `TransactionsAPI.run()` (Fix 2 in TLDR) skips all these plugins on the server. This is correct for the RED ones, but the AutoDOM reordering needs explicit consideration.
