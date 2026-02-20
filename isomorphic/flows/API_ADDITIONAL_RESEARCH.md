@@ -60,16 +60,13 @@ No `getLayout()` method exists. The actual public surface:
 
 ---
 
-## 4. "LayoutConversion" API
+## 4. LayoutConverterAPI
 
-**No matching SlotKey found in either repo.**
+**Verdict: ✗ RED** — already fully documented.
 
-Search results:
-- `LayoutConverterAPI` — already analyzed RED (ComponentMeasureAPI + SharedBlocksAPI deps). In Harmony (`editor-package-layout-converter`).
-- `UnitsConversionsAPI` — units conversion (px/vw/etc.), likely GREEN but not a dep of site-optimizer actions.
-- `LayoutConversionOptions` — a TypeScript interface, not a SlotKey.
+`LayoutConverterAPI` (Harmony, `editor-package-layout-converter`, FLOWS layer) is the only API that uses DOM measurement (`ComponentMeasureAPI`). It is reached via the MIGRATION site-optimizer action.
 
-If the user meant `LayoutConverterAPI`: already documented in SITE_OPT_MIGRATION.md and the dep graph as RED, reached via MIGRATION action.
+See: `SITE_OPT_MIGRATION.md` and the dep graph (ORANGE section #10 / LayoutConverterAPI entry).
 
 ---
 
