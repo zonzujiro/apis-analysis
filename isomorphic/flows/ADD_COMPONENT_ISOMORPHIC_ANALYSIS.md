@@ -1,46 +1,38 @@
-# unstable_addComponent — Isomorphic Breaking Point Analysis
+# unstable_addComponent — Isomorphic Analysis
 
-Analysis of `AddComponentPrivateAPI.unstable_addComponent()` against the isomorphic requirement:
-core must be runnable on the server — no DOM, no browser APIs, no UI.
+Entry point: `AddComponentPrivateAPI.unstable_addComponent()` in `editor-package-component-editors` (REP).
+
+**SlotKey:** `AddComponentPrivateAPI`, FLOWS layer
+**File:** `editor-package-component-editors/src/createAddComponentPrivateAPI.ts`
 
 ---
 
 ## Verdict
 
-`unstable_addComponent` is **client-only as-is**, but the document mutation core is clean and well-isolated.
+**RED as-is**, but the document mutation core is clean and well-isolated.
 
 The breaking deps form three groups:
-1. **Post-mutation UI side effects** — stage context, interaction tracking, anchors (naturally client-only, easily excluded)
-2. **Notification/hook infrastructure** — deeply contaminated by client-only contributors
+1. **Post-mutation UI side effects** — stage context, interaction tracking, anchors (easily excluded)
+2. **Notification/hook infrastructure** — contaminated by client-only contributors
 3. **Layout sync** — measurement-dependent for Grid/AR components
 
-**Key surprise:** `ConcurrentRejectionsAPI` — assumed safe — is **RED** (depends on `PreviewAPI` + `SnackbarFlowsAPI`).
+**Key surprise:** `ConcurrentRejectionsAPI` — assumed safe — is RED (depends on `PreviewAPI` + `SnackbarFlowsAPI`).
 
 ---
 
 ## Reclassifications from Research
 
-### From deep method tracing
-
 | API | Was | Now | Reason |
 |---|---|---|---|
 | `ConcurrentRejectionsAPI.componentAdded()` | ✓ Probably OK | ✗ RED | deps include `PreviewAPI`, `SnackbarFlowsAPI`, `ComponentLayoutAPI_deprecated` |
 | `AnchorsFlowAPI.add()` | ⚠️ Unknown | ✓ GREEN | `HistoryAPI` server-compatible + `InteractionContextAPI` confirmed generic scope wrapper (no DOM/UI) |
-| `ComponentEditorAPI.syncOwnLayout()` | ⚠️ Unknown | ✗ RED (Grid/AR) | Grid + AR implementations call `ComponentMeasureAPI` + `StageContextBuilderAPI` |
-| `PagesDataServiceAPI.getCurrentPage()` | ✓ Close to GREEN | ✗ RED | wraps `extendedDocumentServicesAPI.pages.getCurrentPage()` — which is a **forbidden DS operation** |
+| `ComponentEditorAPI.syncOwnLayout()` | ⚠️ Unknown | ✗ RED (Grid/AR) | Grid + AR call `ComponentMeasureAPI` + `StageContextBuilderAPI`; default is no-op |
+| `PagesDataServiceAPI.getCurrentPage()` | ✓ Close to GREEN | ✗ RED | wraps `extendedDocumentServicesAPI.pages.getCurrentPage()` — forbidden DS operation |
 | `SizingBehaviorEditorSettingsFlowsAPI` | ⚠️ Unknown | ⚠️ ORANGE | method itself is data-only; entry point declares `StageContextBuilderAPI` + `ComponentInteractionAPI` |
-| `VariantsMapperAPI` | ✓ Probably GREEN | ⚠️ ORANGE | 2 contributors found: Breakpoints (ORANGE — chains via `PreviewDisplayAPI`+`ClientDimensionsAPI`) + Repeater Patterns (GREEN — pure pointer comparison) |
+| `VariantsMapperAPI` | ✓ Probably GREEN | ⚠️ ORANGE | 2 contributors: Breakpoints (ORANGE — chains via `PreviewDisplayAPI`+`ClientDimensionsAPI`) + Repeater Patterns (GREEN) |
 
-### HistoryAPI correction (applies globally)
-
-`HistoryAPI` has a **server-compatible implementation** — history recording is a no-op on the server but the
-API is injectable. `batchHistory()` wrapping a data mutation does not block server execution.
-This reclassifies `HistoryAPI` from RED → **ORANGE**.
-
-Impact here: `AnchorsFlowAPI` was classified RED solely due to `HistoryAPI`. That dep is now safe.
-`InteractionContextAPI` has also been confirmed as a **generic context scope wrapper** (DATA_SERVICE layer,
-no DOM/browser event dependencies) — it tracks component state snapshots before/after operations, not
-UI hover/click state. `AnchorsFlowAPI` is therefore reclassified to **GREEN**.
+**HistoryAPI correction (global):** Has a server-compatible no-op implementation — `batchHistory()` wrapping is safe on server.
+`HistoryAPI` is ORANGE (not RED). This reclassifies `AnchorsFlowAPI` to GREEN.
 
 ---
 
@@ -76,7 +68,7 @@ flowchart LR
     SIZING["SizingBehaviorEditorSettingsFlowsAPI\n.toggleAspectRatioLockOnAddComponent()"]:::ambiguous
     CI["ComponentInteractionAPI\n.setLastAddedComponent()"]:::breaking
     SCB2["StageContextBuilderAPI\n.addCurrentContextToRef()"]:::breaking
-    ANCHORS["AnchorsFlowAPI.add()"]:::ok
+    ANCHORS["AnchorsFlowAPI.add()"]:::iso
     SYNC["ComponentEditorAPI\n.syncOwnLayout()"]:::breaking
 
     AC --> DEAD1
@@ -116,18 +108,22 @@ flowchart LR
     classDef dead fill:#2a2a2a,stroke:#555,color:#777
 ```
 
-**Legend:**
-- 🔴 Red — client-only, breaking
-- 🟡 Yellow — ambiguous, depends on contributors or further research
-- ⬛ Grey — isomorphic (confirmed safe)
-- 🟢 Green — isomorphic core (target)
-- ⚫ Dark — dead code, eliminated by settled experiments
+---
+
+## Dead Paths (eliminated by settled experiments)
+
+| API | Method | Reason eliminated |
+|---|---|---|
+| `ComponentAddFlowsAPI` | `prepareStructureToAdd()` | `specs.responsive-editor.addFlowNoStructureManipulation` always TRUE |
+| `ComponentEditorAPI` | `metaData.isContainable()` | `specs.responsive-editor.validateIsContainableBeforeAdd` always FALSE |
+| `ComponentEditorAPI` | `hooks.structure.unstable_confirmAddComponent()` | `shouldConfirmAdd` always FALSE (except site creation) |
+| `ComponentMeasureAPI` | `tryMeasure()`, `measure()` | `compMeasure`/`containerMeasure` always provided — fallback paths dead |
 
 ---
 
 ## Breaking Point Map
 
-### Pre-mutation path — all safe
+### Pre-mutation — all safe
 
 | API | Method | Verdict |
 |---|---|---|
@@ -142,16 +138,16 @@ flowchart LR
 | `TransactionsAPI` | `isRunning()` | ✓ GREEN — in-memory flag check |
 | `DocumentServicesAPI` | `waitForChangesAppliedAsync()` | ✓ GREEN — async doc propagation |
 
-### Post-mutation path — breaking
+### Post-mutation — breaking
 
 | API | Method | Verdict | Root cause |
 |---|---|---|---|
-| `ConcurrentRejectionsAPI` | `componentAdded()` | ✗ RED | `PreviewAPI` + `SnackbarFlowsAPI` in entry point; shows UI snackbar after 5s |
-| `AddComponentHooksAPI` | `unstable_afterAddingNewChildToContainer()` | ✗ RED | entry point declares `StageContextBuilderAPI`; 3/4 contributors RED |
+| `ConcurrentRejectionsAPI` | `componentAdded()` | ✗ RED | `PreviewAPI` + `SnackbarFlowsAPI`; shows UI snackbar after 5s |
+| `AddComponentHooksAPI` | `unstable_afterAddingNewChildToContainer()` | ✗ RED | declares `StageContextBuilderAPI`; 3/4 contributors RED |
 | `SizingBehaviorEditorSettingsFlowsAPI` | `toggleAspectRatioLockOnAddComponent()` | ⚠️ ORANGE | method is data-only; entry point has `StageContextBuilderAPI` + `ComponentInteractionAPI` |
-| `ComponentInteractionAPI` | `setLastAddedComponent()` | ✗ RED | Editor UI — UI selection tracking |
+| `ComponentInteractionAPI` | `setLastAddedComponent()` | ✗ RED | Editor UI — visual selection tracking |
 | `StageContextBuilderAPI` | `addCurrentContextToRef()` | ✗ RED | Stage/Preview — adds variant context to ref |
-| `AnchorsFlowAPI` | `add()` | ✓ GREEN | `HistoryAPI` server-compatible + `InteractionContextAPI` is generic scope wrapper (no DOM) |
+| `AnchorsFlowAPI` | `add()` | ✓ GREEN | `HistoryAPI` server-compatible + `InteractionContextAPI` is generic scope wrapper |
 | `ComponentEditorAPI.hooks` | `afterAddComponent()` | ✗ RED | 5+ RED contributors out of ~10 |
 | `ComponentEditorAPI` | `syncOwnLayout()` | ✗ RED (Grid/AR) | Grid + AR call `ComponentMeasureAPI` + `StageContextBuilderAPI`; default is no-op |
 
@@ -175,13 +171,13 @@ Entry point itself also declares `StageContextBuilderAPI`.
 | Contributor | RED APIs used | Verdict |
 |---|---|---|
 | **Hug Stack Editor** | `StageContextBuilderAPI` | ✗ RED |
-| **Hug Stack Item Editor** | `HugStackActionFlowsPrivateAPI` (private stage API) | ✗ RED |
-| **Section Grid** | `DOMOrderAPI.reorderPageSection()` | ✗ RED (DOM Order category) |
+| **Hug Stack Item Editor** | `HugStackActionFlowsPrivateAPI` | ✗ RED |
+| **Section Grid** | `DOMOrderAPI.reorderPageSection()` | ✗ RED |
 | **Hamburger Toggle** | `ComponentSelectFlowsAPI` | ✗ RED |
 | **Responsive Menu** | `ComponentSelectFlowsAPI` | ✗ RED |
 | **Image X** | `componentDataAPI`, `imageXFlowsAPI` | ✓ GREEN |
-| **Section Behaviours** | `pagesDataServiceAPI` (ORANGE) | ⚠️ ORANGE |
-| **TPA Widget / Glued / Section** | `tpaAPI.setCSSPerBreakpointEnabledForInstance()` | ✗ RED — `TpaDataServiceAPI` is on the forbidden Studio APIs list |
+| **Section Behaviours** | `pagesDataServiceAPI` | ⚠️ ORANGE |
+| **TPA Widget / Glued / Section** | `tpaAPI.setCSSPerBreakpointEnabledForInstance()` | ✗ RED — `TpaDataServiceAPI` on forbidden list |
 | **Multilingual** | `isInTranslationMode()`, notification | ✓ GREEN |
 | **Mobile-Only Enhancer** *(Harmony)* | `StageContextBuilderAPI`, `OdeditorBreakpointsAPI` | ✗ RED |
 | **Default Component Editor** | `hideComponentInBiggerBreakpointsAfterAdd()` | ✓ GREEN |
@@ -197,133 +193,81 @@ Entry point itself also declares `StageContextBuilderAPI`.
 
 ## Solutions
 
-### 1. `StageContextBuilderAPI.addCurrentContextToRef()` — Server-safe stub
+### Solution 1 — `StageContextBuilderAPI` server-safe stub *(highest leverage)*
 
-**Problem:** Adds the current breakpoint/variant context to a component ref so layout updates
-target the right variant. On the server there is no "current context".
+**Problem:** `addCurrentContextToRef(ref)` adds the current breakpoint/variant context to a
+component ref. On the server there is no "current context".
 
-**Solution:** Provide a server-safe `StageContextBuilderAPI` implementation where
-`addCurrentContextToRef(ref)` is an identity function — returns the ref unchanged.
-The server operates on bare (contextless) refs, which is correct: on the server there
-are no breakpoints being edited.
+**Solution:** Implement `addCurrentContextToRef(ref)` as identity — returns `ref` unchanged.
+On the server, layout mutations apply to the base variant, which is correct.
 
-**Impact:** This single fix unblocks multiple RED deps in one shot:
-- The direct call in the add flow
-- `AddComponentHooksAPI` default impl
-- Page Grid contributor in `unstable_afterAddingNewChildToContainer`
-- Grid `syncOwnLayout` implementation
-- Aspect Ratio `syncOwnLayout` implementation
-- Same pattern in the `removeComponent` Default branch
+**Unblocks (in this flow alone):** direct call, `AddComponentHooksAPI` default impl,
+Page Grid contributor, Grid `syncOwnLayout`, AR `syncOwnLayout`. Same fix also
+unblocks all flex layout actions and add component Harmony action.
 
-**Effort:** Low — one stub entry point, no changes to callers.
+**Effort:** Minimal.
 
 ---
 
-### 2. `ComponentInteractionAPI.setLastAddedComponent()` — Omit on server
+### Solution 2 — `ComponentInteractionAPI.setLastAddedComponent()` — omit on server
 
-**Problem:** Tracks the last added component for visual selection feedback in the editor UI.
+**Problem:** Tracks the last added component for visual selection feedback.
 
-**Solution:** Don't call this in the server path. It has no meaning on the server —
-there is no selection state to update.
+**Solution:** Conditional call guard — don't call in server path.
 
-**Effort:** Minimal — conditional call guard.
-
----
-
-### 3. `ConcurrentRejectionsAPI.componentAdded()` — Move to client path
-
-**Problem:** Schedules a 5-second timer, then checks if the component was concurrently
-rejected and shows a snackbar notification. Deps include `PreviewAPI` + `SnackbarFlowsAPI`.
-
-**Solution:** Exclude entirely from the server path. Concurrent rejection UX (snackbar after
-5s timeout) is inherently a client-side concern. On the server, concurrent conflicts would
-be surfaced as errors in the API response, not UI toasts.
-
-**Effort:** Minimal — conditional call guard.
+**Effort:** Minimal.
 
 ---
 
-### 4. `AddComponentHooksAPI.unstable_afterAddingNewChildToContainer()` — Two options
+### Solution 3 — `ConcurrentRejectionsAPI.componentAdded()` — move to client path
 
-**Problem:** The hook adjusts the new component's layout under its parent (margins,
-cross-breakpoint layout update). Entry point declares `StageContextBuilderAPI`.
-3 of 4 contributors are client-only.
+**Problem:** Schedules a 5-second timer, checks for concurrent rejection, shows snackbar.
+Deps: `PreviewAPI` + `SnackbarFlowsAPI`.
 
-**Option A — Server-safe stub (quick, follows solution 1):**
-If `StageContextBuilderAPI` returns bare refs on the server (solution 1), the default
-implementation's core logic becomes viable: it reads layout state, calculates new margins,
-and updates layout — all data operations. `VariantsIteratorAPI` (cross-breakpoint update)
-still needs a server-safe stub or skip.
+**Solution:** Exclude entirely from server path. Concurrent rejection UX is inherently
+client-side. Server conflicts surface as API errors, not UI toasts.
 
-**Option B — Contributor declaration:**
-Add a `serverSafe: boolean` flag to hook contributions. The hook runner skips
-non-safe contributors on the server. Only the Default no-op runs server-side,
-which is correct — post-add layout adjustment is a client visual concern.
-
-**Option B is recommended** — Option A brings more logic to the server than needed.
-Post-add layout adjustment is about visual stage positioning and can safely be
-deferred to client execution.
-
-**Effort:** Medium — infrastructure change to hook runner + marking each contributor.
+**Effort:** Minimal.
 
 ---
 
-### 5. `afterAddComponent` RED contributors — Contributor declaration
+### Solution 4 — Hook `serverSafe` declaration mechanism
 
-**Problem:** 5 of ~10 contributors use client-only APIs:
-- Hug Stack → `StageContextBuilderAPI`
-- Section Grid → `DOMOrderAPI.reorderPageSection()`
-- Hamburger / Responsive menu → `ComponentSelectFlowsAPI`
+**Problem:** Both `afterAddComponent` and `unstable_afterAddingNewChildToContainer` have a
+mix of server-safe and client-only contributors. Without a declaration mechanism, the entire
+hook must be skipped on server — losing valid server-side behaviour (Image X, Multilingual).
 
-**Solution:** Same `serverSafe: boolean` declaration system as solution 4.
-- Server path runs: Image X, Multilingual, Default (all data/flag operations)
-- Server path skips: Hug Stack, Section Grid, Hamburger, Responsive Menu
+**Solution:** Add `serverSafe: boolean` flag to hook contributions. The hook runner skips
+non-safe contributors on the server.
 
-The skipped contributors are all about visual post-placement behaviour (stack spacing,
-DOM render order, menu selection) — none of these have server-side meaning.
+- Server runs: Image X, Multilingual, Default (data/flag operations)
+- Server skips: Hug Stack, Section Grid, Hamburger, Responsive Menu
 
-**Effort:** Medium — same infrastructure as solution 4 amortizes this.
+**Effort:** Medium — infrastructure change to hook runner, then mark each contributor.
 
 ---
 
-### 6. `ComponentEditorAPI.syncOwnLayout()` Grid/AR — Data-input pattern
+### Solution 5 — `ComponentEditorAPI.syncOwnLayout()` Grid/AR — data-input pattern
 
-**Problem:** Grid and Aspect Ratio implementations call `componentMeasureAPI.tryMeasure/measureOrThrow()`
-to get current dimensions, then use `StageContextBuilderAPI` for variant-aware layout updates.
+**Problem:** Grid and AR implementations re-measure the component to get dimensions, then
+call `StageContextBuilderAPI` for variant-aware layout updates.
 
-**Solution:** Since `compMeasure`/`containerMeasure` are always provided as parameters in
-the add flow (settled experiment guarantee), pass them down into the enhancers instead of
-re-measuring. The enhancers already receive enough information — they just don't use it.
+**Solution:** Since `compMeasure`/`containerMeasure` are always provided in the add flow,
+pass them down into the enhancers instead of re-measuring. With measurements as input +
+`StageContextBuilderAPI` stub (Solution 1), `syncOwnLayout` becomes fully server-safe.
 
-With measurements provided as data input + `StageContextBuilderAPI` stub (solution 1),
-`syncOwnLayout` becomes fully server-safe for Grid and AR components.
-
-**Effort:** Medium — modify Grid + AR enhancers to accept optional pre-provided measurements.
+**Effort:** Medium — modify Grid + AR enhancers to accept pre-provided measurements.
 
 ---
 
-### 7. `AnchorsFlowAPI.add()` — Resolved GREEN
+### Solution 6 — `SizingBehaviorEditorSettingsFlowsAPI` — entry point split
 
-**Status:** GREEN — fully resolved.
+**Problem:** `toggleAspectRatioLockOnAddComponent()` is pure data. Entry point also declares
+`StageContextBuilderAPI` and `ComponentInteractionAPI` for other methods.
 
-`HistoryAPI` was the initial concern (server-compatible no-op — see HistoryAPI correction section).
-`InteractionContextAPI.runInContext()` was confirmed to be a **generic scope wrapper** — it tracks
-component state snapshots before/after operations (DATA_SERVICE layer, no DOM/browser event dependencies).
-Not to be confused with `ComponentInteractionAPI` which manages UI selection/hover state.
-
-Both deps safe → `AnchorsFlowAPI` is **GREEN**, no further action needed.
-
----
-
-### 8. `SizingBehaviorEditorSettingsFlowsAPI` — Entry point split
-
-**Problem:** `toggleAspectRatioLockOnAddComponent()` is pure data (reads component
-metadata, writes editor settings). The entry point also declares `StageContextBuilderAPI`
-and `ComponentInteractionAPI` for other methods in the same entry point.
-
-**Solution:** Extract `toggleAspectRatioLockOnAddComponent()` into a separate entry
-point that only depends on `EditorSettingsAPI`, `ComponentEditorAPI.sizingBehaviour`,
-and `SizingBehaviorEditorSettingsContributionPrivateAPI`.
+**Solution:** Extract `toggleAspectRatioLockOnAddComponent()` into a separate entry point
+that only depends on `EditorSettingsAPI`, `ComponentEditorAPI.sizingBehaviour`, and
+`SizingBehaviorEditorSettingsContributionPrivateAPI`.
 
 **Effort:** Low-Medium — entry point refactor, no logic changes.
 
@@ -335,29 +279,29 @@ and `SizingBehaviorEditorSettingsContributionPrivateAPI`.
 unstable_addComponent()
 ├── [DEAD]  prepareStructureToAdd, isContainable, confirmAddComponent, measurement fallback
 │
-├── ✗ RED           PagesDataServiceAPI.getCurrentPage() — ds.pages.getCurrentPage is forbidden
+├── ✗ RED           PagesDataServiceAPI.getCurrentPage()   ← forbidden DS op; skip on server
 ├── ✓ GREEN         beforeAddComponent hooks (vector image — network, no DOM)
 ├── ✓ GREEN         ComponentRoutingAPI, OperationsTrackerAPI
-├── ✓ GREEN         DocumentServicesFlows.addComponent()  ← THE MUTATION
+├── ✓ GREEN         DocumentServicesFlows.addComponent()   ← THE MUTATION
 ├── ✓ GREEN         waitForChangesAppliedAsync()
 │
-├── ✗ RED     ConcurrentRejectionsAPI  ← omit on server (solution 3)
+├── ✗ RED     ConcurrentRejectionsAPI                      ← omit on server (Solution 3)
 │
-├── ✗ RED     AddComponentHooksAPI.unstable_afterAddingNewChildToContainer()
-│   ├── ✗ RED     default impl, Page Grid, Hug Stack  ← skip on server (solution 4)
-│   └── ✓ GREEN   Default Editor no-op
+├── ✗ RED     AddComponentHooksAPI
+│   ├── ✗ RED   default impl, Page Grid, Hug Stack         ← skip on server (Solution 4)
+│   └── ✓ GREEN Default Editor no-op
 │
-├── ⚠ ORANGE  SizingBehaviorEditorSettingsFlowsAPI  ← entry point split (solution 8)
-├── ✗ RED     ComponentInteractionAPI  ← omit on server (solution 2)
-├── ✗ RED     StageContextBuilderAPI  ← server-safe stub (solution 1)
+├── ⚠ ORANGE  SizingBehaviorEditorSettingsFlowsAPI         ← entry point split (Solution 6)
+├── ✗ RED     ComponentInteractionAPI                      ← omit on server (Solution 2)
+├── ✗ RED     StageContextBuilderAPI                       ← server-safe stub (Solution 1)
 ├── ✓ GREEN   AnchorsFlowAPI
 │
 ├── ✗ RED (5+) afterAddComponent hooks
-│   ├── ✗ RED    Hug Stack, Section Grid, Hamburger, Menu  ← skip on server (solution 5)
+│   ├── ✗ RED    Hug Stack, Section Grid, Hamburger, Menu  ← skip on server (Solution 4)
 │   └── ✓ GREEN  Image X, Multilingual, Default
 │
-└── ✗ RED  ComponentEditorAPI.syncOwnLayout()
-    ├── ✗ RED (Grid/AR)  ← data-input pattern (solution 6)
+└── ✗ RED   ComponentEditorAPI.syncOwnLayout()
+    ├── ✗ RED (Grid/AR)                                    ← data-input pattern (Solution 5)
     └── ✓ GREEN  Default (no-op)
 ```
 
@@ -369,16 +313,16 @@ unstable_addComponent()
 
 ```
 addComponent_server(containerRef, compStructure, options)
-  → [PagesDataServiceAPI.getCurrentPage() — SKIP: forbidden DS operation]
-  → ComponentEditorAPI.hooks.structure.beforeAddComponent()  [all contributors safe]
+  → [PagesDataServiceAPI.getCurrentPage() — SKIP: forbidden DS op]
+  → ComponentEditorAPI.hooks.structure.beforeAddComponent()   [all contributors safe]
   → ComponentRoutingAPI.getCompRefForAdd()
-  → VariantsMapperAPI.getVariantsMapForAddComponent()        [serverSafe contributors only]
+  → VariantsMapperAPI.getVariantsMapForAddComponent()         [serverSafe contributors only]
   → OperationsTrackerAPI.registerOperation()
       → EditorPointerAPI.executeDocumentPointerAPI()
-          → DocumentServicesFlows.addComponent()             ← mutation
+          → DocumentServicesFlows.addComponent()              ← mutation
   → DocumentServicesAPI.waitForChangesAppliedAsync()
-  → ComponentEditorAPI.hooks.structure.afterAddComponent()   [serverSafe contributors only]
-  → ComponentEditorAPI.syncOwnLayout()                       [with pre-provided measurements]
+  → ComponentEditorAPI.hooks.structure.afterAddComponent()    [serverSafe contributors only]
+  → ComponentEditorAPI.syncOwnLayout()                        [with pre-provided measurements]
 ```
 
 ### Client path
@@ -398,85 +342,63 @@ addComponent_client(containerRef, compStructure, options)
 
 ## Key Takeaways
 
-**1. The mutation core is already clean.**
-`DocumentServicesFlows.addComponent()` has a single dep, does structure normalization, and delegates.
+1. **The mutation core is already clean.** `DocumentServicesFlows.addComponent()` has a single dep, does structure normalization, and delegates.
 
-**2. `StageContextBuilderAPI` stub is the highest-leverage fix.**
-One server-safe identity implementation unblocks 5+ RED deps across the flow.
+2. **`StageContextBuilderAPI` stub is the highest-leverage fix.** One identity-function implementation unblocks 5+ RED deps across the flow.
 
-**3. `ConcurrentRejectionsAPI` is easy to move.**
-Its entire purpose (snackbar after 5s) belongs on the client regardless. Remove from server path, done.
+3. **`ConcurrentRejectionsAPI` is easy to move.** Its entire purpose (snackbar after 5s) belongs on the client. Remove from server path.
 
-**4. The hook system needs a `serverSafe` declaration mechanism.**
-`afterAddComponent` and `unstable_afterAddingNewChildToContainer` each have a mix of safe and
-unsafe contributors. Without a declaration mechanism, the only option is to skip the entire hook
-on the server — which loses valid server-side behaviour (Image X, Multilingual).
+4. **The hook system needs a `serverSafe` declaration mechanism.** Both major hooks have a mix of safe and unsafe contributors. Without it, the only option is to skip the entire hook — losing valid server-side behaviour.
 
-**5. `AnchorsFlowAPI` is GREEN — a useful pattern to replicate.**
-Both its deps are server-safe: `HistoryAPI` (server-compatible no-op) and `InteractionContextAPI`
-(generic context scope wrapper at DATA_SERVICE layer, no DOM/events). When evaluating other APIs,
-look for the same pattern: infrastructure APIs at lower layers are often safe even when their names
-sound UI-related.
+5. **`AnchorsFlowAPI` is GREEN — a useful pattern to replicate.** Both deps are server-safe: `HistoryAPI` (no-op impl) and `InteractionContextAPI` (generic scope wrapper, DATA_SERVICE layer, no DOM). Names can be misleading; trace to the implementation.
 
-**6. Post-mutation layout ops can wait for client.**
-`syncOwnLayout`, `unstable_afterAddingNewChildToContainer`, and related layout hooks are all
-about visual placement on the stage. This work doesn't need to happen on the server.
+6. **Post-mutation layout ops can wait for client.** `syncOwnLayout`, `unstable_afterAddingNewChildToContainer`, and related hooks are about visual stage placement. None need to happen on the server.
 
 ---
 
 ## Harmony-Specific Additions
 
-Harmony (`/Users/ivant/projects/odeditor-packages-new`) adds further contributors and hooks
-on top of the REP base layer.
+Harmony adds further contributors and hooks on top of the REP base layer.
 
-### `afterAddComponent` — Harmony mobile-only enhancer
+### `afterAddComponent` — mobile-only enhancer
 
 **File:** `odeditor-editor-package-breakpoints/src/createMobileOnlyComponentsEnhancer.tsx`
 
-Called via `ComponentEditorAPI.hooks.structure.afterAddComponent` in Harmony.
-
-| API used | Classification |
+| API | Verdict |
 |---|---|
 | `StageContextBuilderAPI` | ✗ RED |
 | `OdeditorBreakpointsAPI` | ✗ RED (stage-aware breakpoint metadata) |
 
-Verdict: **RED**. Hides the component in larger breakpoints after add — a purely visual
-stage operation with no server-side meaning.
+Verdict: **RED**. Hides component in larger breakpoints after add — purely visual stage op.
 
 ---
 
 ### `AfterAddComponentSlot` (Harmony private slot)
 
-**SlotKey:** `AfterAddComponentSlot`, FLOWS layer.
-**File:** `editor-package-component-editors/src/afterAddComponentSlot.ts`
+**SlotKey:** `AfterAddComponentSlot`, FLOWS layer
 
-Separate from the REP `afterAddComponent` hook. Harmony adds 3 contributors:
+3 contributors, all RED:
 
-| Contributor | APIs used | Verdict |
-|---|---|---|
-| **Menu handler** | `ComponentSelectFlowsAPI` | ✗ RED |
-| **Repeater + Collection handler** | `documentServicesAPI.platform.controllers.getStageData()` | ✗ RED (forbidden DS op) |
-| **Grouped Elements handler** | `ComponentSelectFlowsAPI` | ✗ RED |
-
-All 3 contributors are **RED**. `AfterAddComponentSlot` is client-only in Harmony.
+| Contributor | Verdict |
+|---|---|
+| Menu handler — `ComponentSelectFlowsAPI` | ✗ RED |
+| Repeater + Collection — `ds.platform.controllers.getStageData()` (forbidden DS op) | ✗ RED |
+| Grouped Elements — `ComponentSelectFlowsAPI` | ✗ RED |
 
 ---
 
 ### TPA Add Component Hook (Harmony)
 
-**File:** `editor-package-tpa/src/hooks/tpaAddComponentHook.ts` *(Harmony variant)*
+**File:** `editor-package-tpa/src/hooks/tpaAddComponentHook.ts`
 
-Executed as part of the add flow for TPA components.
+| API | Verdict |
+|---|---|
+| `ComponentMeasureAPI` | ✗ RED |
+| `PreviewDisplayAPI` | ✗ RED |
+| `StageContextBuilderAPI` | ✗ RED |
+| `OdeditorLayoutBuilderAPI` | ✗ RED |
 
-| API used | Classification | Reason |
-|---|---|---|
-| `ComponentMeasureAPI` | ✗ RED | DOM measurement |
-| `PreviewDisplayAPI` | ✗ RED | Stage/Preview |
-| `StageContextBuilderAPI` | ✗ RED | Stage/Preview |
-| `OdeditorLayoutBuilderAPI` | ✗ RED | See below |
-
-Verdict: **RED**. All 4 deps are client-only. TPA add is inherently a runtime browser flow
-(TPA SDK, iframe communication, stage positioning).
+Verdict: **RED**. TPA add is inherently a browser flow (TPA SDK, iframe, stage positioning).
 
 ---
 
@@ -484,16 +406,4 @@ Verdict: **RED**. All 4 deps are client-only. TPA add is inherently a runtime br
 
 **File:** `editor-package-add-panel-logic/src/createAddPanelLogicAPI.ts`
 
-Used for image, video, and SVG component additions to calculate initial layout sizing
-from media metadata (aspect ratio, natural dimensions → CSS layout values).
-
-`OdeditorLayoutBuilderAPI` is declared in the `editor-package-add-panel-logic` entry point
-as a direct dependency for this sizing calculation.
-
-Verdict: **RED** — `OdeditorLayoutBuilderAPI` depends on `StageContextBuilderAPI` and
-`PreviewDisplayAPI`. Even though the actual sizing calculation is data-based, the API is
-not injectable without its full stage-aware dependency chain.
-
-**Potential fix:** Extract the pure layout-math portion (aspect ratio → CSS size) into
-a standalone utility that doesn't require `OdeditorLayoutBuilderAPI`. The input data
-(media natural dimensions) is always available at add time.
+Used for image/video/SVG adds to calculate initial layout from media metadata. Depends on `StageContextBuilderAPI` + `PreviewDisplayAPI` — **RED**. Potential fix: extract the pure aspect-ratio math into a standalone utility.
